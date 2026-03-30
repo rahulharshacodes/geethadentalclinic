@@ -201,10 +201,14 @@
                 <!-- Section: Appointments -->
                 <section id="section-appointments" class="dashboard-section">
                     <div class="data-container">
-                        <div class="container-header">
+                        <div class="container-header" style="flex-wrap: wrap; gap: 16px;">
                             <h3><i class="fa-solid fa-calendar-check"></i> Manage Appointments</h3>
-                            <div class="header-actions">
-                                <select id="appointment-filter" class="form-select">
+                            <div class="header-actions" style="display: flex; gap: 12px; align-items: center; flex: 1; justify-content: flex-end;">
+                                <div class="search-box" style="margin: 0; padding: 0; max-width: 300px; flex: 1; position: relative;">
+                                    <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 14px; top: 12px; color: var(--text-muted);"></i>
+                                    <input type="text" id="appointment-search" placeholder="Search name or phone..." style="width: 100%; padding: 10px 16px 10px 40px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.95rem; outline: none;">
+                                </div>
+                                <select id="appointment-filter" class="form-select" style="padding: 10px 36px 10px 16px; border-radius: 8px; border: 1px solid var(--border-color); font-weight: 500; cursor: pointer; color: var(--text-main); appearance: none; background: url('data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%2364748b\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'><polyline points=\'6 9 12 15 18 9\'></polyline></svg>') no-repeat right 12px center; background-color: white; outline: none;">
                                     <option value="all">All Status</option>
                                     <option value="pending" selected>Pending</option>
                                     <option value="confirmed">Confirmed</option>

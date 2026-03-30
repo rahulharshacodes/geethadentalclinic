@@ -49,6 +49,7 @@ const ui = {
     statMonthlyInc: document.getElementById('stat-monthly-income'),
     
     // Filters
+    apptSearch: document.getElementById('appointment-search'),
     apptFilter: document.getElementById('appointment-filter'),
 
     // Treatment Form
@@ -281,6 +282,7 @@ function renderAppointmentsUI() {
     let htmlToday = '';
 
     const selectedFilter = ui.apptFilter.value; 
+    const searchTerm = (ui.apptSearch ? ui.apptSearch.value.toLowerCase().trim() : '');
 
     _cachedAppts.forEach(data => {
         const id = data.id;
@@ -288,23 +290,28 @@ function renderAppointmentsUI() {
         if (data.status === 'pending') pendingCount++;
         if (data.date === currentDateStr) todayCount++;
 
-        // Render main Appointments section based on filter
+        // Render main Appointments section based on filter AND search
         if (selectedFilter === 'all' || selectedFilter === data.status) {
-            htmlAll += `
-                <tr>
-                    <td><strong>${data.name}</strong></td>
-                    <td>${data.phone}</td>
-                    <td>${data.date}</td>
-                    <td>${data.time}</td>
-                    <td><span class="status-pill status-${data.status}">${data.status}</span></td>
-                    <td>
-                        ${data.status === 'pending' ? `
-                            <button class="btn btn-sm btn-success" onclick="updateApptStatus('${id}', 'confirmed')">Confirm</button>
-                            <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="updateApptStatus('${id}', 'rejected')">Reject</button>
-                        ` : '-'}
-                    </td>
-                </tr>
-            `;
+            const nameMatch = (data.name || '').toLowerCase().includes(searchTerm);
+            const phoneMatch = (data.phone || '').toLowerCase().includes(searchTerm);
+            
+            if (searchTerm === '' || nameMatch || phoneMatch) {
+                htmlAll += `
+                    <tr>
+                        <td><strong>${data.name}</strong></td>
+                        <td>${data.phone}</td>
+                        <td>${data.date}</td>
+                        <td>${data.time}</td>
+                        <td><span class="status-pill status-${data.status}">${data.status}</span></td>
+                        <td>
+                            ${data.status === 'pending' ? `
+                                <button class="btn btn-sm btn-success" onclick="updateApptStatus('${id}', 'confirmed')">Confirm</button>
+                                <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="updateApptStatus('${id}', 'rejected')">Reject</button>
+                            ` : '-'}
+                        </td>
+                    </tr>
+                `;
+            }
         }
 
         if (data.date === currentDateStr && data.attendance === 'absent') absentCount++;
@@ -453,6 +460,12 @@ window.viewProblem = (problemEnc) => {
 ui.apptFilter.addEventListener('change', () => {
     renderAppointmentsUI();
 });
+
+if (ui.apptSearch) {
+    ui.apptSearch.addEventListener('input', () => {
+        renderAppointmentsUI();
+    });
+}
 
 // Modals
 document.getElementById('open-add-patient').addEventListener('click', () => {
