@@ -2,8 +2,16 @@ import { showToast } from './auth.js';
 import { supabase } from './supabase-config.js';
 
 // Global Data State
+function getLocalYYYYMMDD() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 let activeChannels = [];
-let currentDateStr = new Date().toISOString().split('T')[0];
+let currentDateStr = getLocalYYYYMMDD();
 let _cachedAppts = [];
 let _cachedPatients = [];
 let _cachedPayments = [];
@@ -57,7 +65,7 @@ const ui = {
 // Initialize Date Control
 function updateDateLabel() {
     if (!ui.dateLabelText) return;
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalYYYYMMDD();
     if (currentDateStr === todayStr) {
         ui.dateLabelText.textContent = "Today";
     } else {
