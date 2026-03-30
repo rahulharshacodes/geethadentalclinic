@@ -1,3 +1,27 @@
+// ─── Firebase Configuration ───
+const firebaseConfig = {
+    apiKey: "AIzaSyCuF0GhgPpX66GgLhfafHmY0EkkZwzXg08",
+    authDomain: "geetha-dental.firebaseapp.com",
+    projectId: "geetha-dental",
+    storageBucket: "geetha-dental.firebasestorage.app",
+    messagingSenderId: "1025837340529",
+    appId: "1:1025837340529:web:12693de92e19a655a308d0"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ─── Toast Notification ───
+function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    if (!toast) return;
+    toast.textContent = message;
+    toast.className = 'toast toast-' + type + ' toast-show';
+    setTimeout(() => {
+        toast.classList.remove('toast-show');
+    }, 4000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     
     // Sticky Navbar
@@ -155,5 +179,139 @@ document.addEventListener('DOMContentLoaded', () => {
             currentSlideIndex = (currentSlideIndex + 1) % testimonialSlides.length;
             updateCarousel();
         }, 3000);
+    }
+
+    // Visual Clinic Tour Carousel
+    const tourInner = document.querySelector('.tour-inner');
+    const tourItems = document.querySelectorAll('.tour-item');
+    const tourPrev = document.querySelector('.tour-prev');
+    const tourNext = document.querySelector('.tour-next');
+
+    if (tourInner && tourItems.length > 0) {
+        let currentTourIndex = 0;
+        const totalTourItems = tourItems.length;
+
+        function updateTourCarousel() {
+            const offset = -currentTourIndex * (100 / totalTourItems);
+            tourInner.style.transform = `translateX(${offset}%)`;
+        }
+
+        tourNext.addEventListener('click', () => {
+            currentTourIndex = (currentTourIndex + 1) % totalTourItems;
+            updateTourCarousel();
+        });
+
+        tourPrev.addEventListener('click', () => {
+            currentTourIndex = (currentTourIndex - 1 + totalTourItems) % totalTourItems;
+            updateTourCarousel();
+        });
+    }
+
+    // ─── Appointment Form → Firebase Firestore ───
+    const appointmentForm = document.getElementById('appointmentForm');
+    if (appointmentForm) {
+        appointmentForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Clear previous validation states
+            appointmentForm.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+            appointmentForm.querySelectorAll('.field-error').forEach(el => el.remove());
+            
+            const nameInput = document.getElementById('patName');
+            const mobileInput = document.getElementById('patMobile');
+            const dateInput = document.getElementById('patDate');
+            const timeInput = document.getElementById('patTime');
+            
+            const name = nameInput.value.trim();
+            const phone = mobileInput.value.trim();
+            const date = dateInput.value;
+            const time = timeInput.value;
+            
+            let hasError = false;
+
+            // Validate name
+            if (!name || name.length < 2) {
+                showFieldError(nameInput, 'Please enter your full name');
+                hasError = true;
+            }
+            
+            // Validate phone — allow 10-digit Indian numbers with optional +91 / 0 prefix
+            const phoneClean = phone.replace(/[\s\-()]/g, '');
+            const phoneRegex = /^(\+91|91|0)?[6-9]\d{9}$/;
+            if (!phoneClean || !phoneRegex.test(phoneClean)) {
+                showFieldError(mobileInput, 'Please enter a valid 10-digit mobile number');
+                hasError = true;
+            }
+            
+            // Validate date — must be today or in the future
+            if (!date) {
+                showFieldError(dateInput, 'Please select a date');
+                hasError = true;
+            } else {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const selected = new Date(date);
+                if (selected < today) {
+                    showFieldError(dateInput, 'Please select today or a future date');
+                    hasError = true;
+                }
+            }
+            
+            // Validate time
+            if (!time) {
+                showFieldError(timeInput, 'Please select a time slot');
+                hasError = true;
+            }
+            
+            if (hasError) {
+                console.warn('Form validation failed. Errors found.');
+                return;
+            }
+
+            console.log('Submitting appointment for:', name, phoneClean);
+
+            // Show loading state
+            const submitBtn = appointmentForm.querySelector('button[type="submit"]');
+            const originalHTML = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+
+            try {
+                await db.collection('appointments').add({
+                    name: name,
+                    phone: phoneClean, // Store cleaned number
+                    date: date,
+                    time: time,
+                    problem: document.getElementById('patProblem').value.trim() || 'No description',
+                    status: 'pending',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showToast('Appointment request sent! We will confirm shortly.', 'success');
+                appointmentForm.reset();
+            } catch (error) {
+                console.error('Firestore error:', error);
+                showToast('Something went wrong. Please try again or call us directly.', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHTML;
+            }
+        });
+    }
+
+    // ─── Field-level error helper ───
+    function showFieldError(input, message) {
+        input.classList.add('input-error');
+        const errorEl = document.createElement('span');
+        errorEl.className = 'field-error';
+        errorEl.textContent = message;
+        input.parentElement.appendChild(errorEl);
+    }
+
+    // Set min date on date picker to today
+    const dateInput = document.getElementById('patDate');
+    if (dateInput) {
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.setAttribute('min', today);
     }
 });

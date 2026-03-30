@@ -23,7 +23,7 @@
     <header class="navbar">
         <div class="container nav-container">
             <a href="#" class="logo">
-                <img src="clinicbannernobg.png" alt="Geetha Dental Clinic Logo" style="max-height: 60px; width: auto;">
+                <img src="clinicbannernobg.png" alt="Geetha Dental Clinic Logo" style="max-height: 100px; width: auto;">
             </a>
             <nav class="nav-links">
                 <a href="#services">Services</a>
@@ -33,7 +33,7 @@
                 <a href="#contact">Contact</a>
             </nav>
             <div class="nav-actions">
-                <a href="#contact" class="btn btn-primary">Book Appointment</a>
+                <a href="#appointment" class="btn btn-primary">Book Appointment</a>
                 <button class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
             </div>
         </div>
@@ -56,17 +56,17 @@
     <!-- Hero Section -->
     <section id="hero" class="hero">
         <div class="hero-bg">
-            <img src="https://images.unsplash.com/photo-1606811841689-23dfddce3e95?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+            <img src="mainpagephoto.jpeg"
                 alt="Geetha Dental Clinic Background">
             <div class="hero-overlay"></div>
         </div>
-        <div class="container hero-content fade-in-up">
+        <div class="container hero-content reveal">
             <span class="badge">Creating Healthy, Confident Smiles</span>
             <h1>We help You <br>Smile Better</h1>
             <p>22+ years of trusted, pain-minimal dental care in North Bengaluru. Experience modern dentistry with a
                 gentle touch.</p>
             <div class="hero-btns">
-                <a href="#contact" class="btn btn-primary btn-large">Book Appointment</a>
+                <a href="#appointment" class="btn btn-primary btn-large">Book Appointment</a>
                 <a href="tel:+919035445244" class="btn btn-outline btn-large">
                     <i class="fa-solid fa-phone"></i> Call Now
                 </a>
@@ -77,42 +77,42 @@
     <!-- Services Section -->
     <section id="services" class="section bg-light">
         <div class="container">
-            <div class="section-header text-center fade-in-up">
+            <div class="section-header text-center reveal">
                 <h2>Our Dental Services</h2>
                 <p>Comprehensive care tailored to your needs using modern techniques.</p>
             </div>
             <div class="services-grid">
-                <div class="service-card glass-card fade-in-up">
+                <div class="service-card glass-card reveal">
                     <div class="service-icon"><i class="fa-solid fa-stethoscope"></i></div>
                     <h3>General & Preventive</h3>
                     <p>Regular check-ups, dental cleanings (scaling & polishing), fluoride application, and oral-health
                         consultations.</p>
                 </div>
-                <div class="service-card glass-card fade-in-up" style="transition-delay: 100ms;">
+                <div class="service-card glass-card reveal reveal-delay-1">
                     <div class="service-icon"><i class="fa-solid fa-tooth"></i></div>
                     <h3>Restorative</h3>
                     <p>Dental fillings, high-quality crowns, bridges, inlays, and onlays to restore damaged or decayed
                         teeth.</p>
                 </div>
-                <div class="service-card glass-card fade-in-up" style="transition-delay: 200ms;">
+                <div class="service-card glass-card reveal reveal-delay-2">
                     <div class="service-icon"><i class="fa-solid fa-teeth"></i></div>
                     <h3>Prosthodontics</h3>
                     <p>Complete dentures, partial dentures (removable prosthetics), fixed partial dentures, and
                         artificial-tooth replacements.</p>
                 </div>
-                <div class="service-card glass-card fade-in-up" style="transition-delay: 300ms;">
+                <div class="service-card glass-card reveal reveal-delay-3">
                     <div class="service-icon"><i class="fa-solid fa-syringe"></i></div>
                     <h3>Extractions</h3>
                     <p>Safe and pain-minimal simple oral-surgical procedures and management of pain-related dental
                         issues.</p>
                 </div>
-                <div class="service-card glass-card fade-in-up" style="transition-delay: 400ms;">
+                <div class="service-card glass-card reveal reveal-delay-1">
                     <div class="service-icon"><i class="fa-solid fa-face-smile-beam"></i></div>
                     <h3>Cosmetic Dentistry</h3>
                     <p>Smile-enhancing aesthetic procedures, teeth whitening, and collaborative treatments as
                         applicable.</p>
                 </div>
-                <div class="service-card glass-card fade-in-up" style="transition-delay: 500ms;">
+                <div class="service-card glass-card reveal reveal-delay-2">
                     <div class="service-icon"><i class="fa-solid fa-child"></i></div>
                     <h3>Child Friendly</h3>
                     <p>Conservative, minimally invasive treatment plans designed specifically to ensure comfort and
@@ -122,10 +122,29 @@
         </div>
     </section>
 
+    <!-- Smile Results Section -->
+    <section id="results" class="section">
+        <div class="container text-center reveal">
+            <div class="section-header">
+                <h2>Our Results</h2>
+                <p>Advanced diagnostic and clinical tools for precise results.</p>
+            </div>
+            <div class="comparison-slider">
+                <!-- Bottom Image (Right) -->
+                <img src="afterteeth.png" alt="Teeth After Treatment" class="img-bottom">
+                <!-- Top Image (Left) -->
+                <img src="beforeteeth.png" alt="Teeth Before Treatment" class="img-top" id="comparison-after">
+                <div class="comparison-handle" id="comparison-handle">
+                    <i class="fa-solid fa-arrows-left-right"></i>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- About Section -->
     <section id="about" class="section">
         <div class="container about-container">
-            <div class="about-content fade-in-left">
+            <div class="about-content reveal">
                 <h2>About Geetha Dental Clinic</h2>
                 <p>Geetha Dental Clinic is a trusted general dental centre located in the Kammagondanahalli–Jalahalli
                     West (Abbigere) area of North Bengaluru. We have been serving the local community for about
@@ -148,11 +167,10 @@
                         with easy parking</li>
                 </ul>
             </div>
-            <div class="about-image fade-in-right">
+            <div class="about-image reveal reveal-delay-2">
                 <div class="image-wrapper glass-card">
-                    <!-- Placeholder for clinic interior -->
-                    <img src="https://images.unsplash.com/photo-1629909613654-28e377c37b09?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
-                        alt="Clinic Interior">
+                    <img src="dentalchair.jpeg"
+                        alt="Modern Dental Chair at Geetha Dental Clinic">
                     <div class="experience-badge">
                         <span class="number">22+</span>
                         <span class="text">Years of<br>Excellence</span>
@@ -165,10 +183,9 @@
     <!-- Meet the Dentist -->
     <section id="dentist" class="section bg-light">
         <div class="container">
-            <div class="dentist-wrapper glass-card fade-in-up">
+            <div class="dentist-wrapper glass-card reveal">
                 <div class="dentist-image">
-                    <!-- Placeholder for Dr. Priya Harsha -->
-                    <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80"
+                    <img src="dentist.jpeg"
                         alt="Dr. Priya Harsha">
                 </div>
                 <div class="dentist-info">
@@ -194,21 +211,37 @@
         </div>
     </section>
 
-    <!-- Smile Gallery -->
+    <!-- Visual Clinic Tour -->
     <section id="gallery" class="section">
-        <div class="container text-center fade-in-up">
+        <div class="container text-center reveal">
             <div class="section-header">
-                <h2>Smile Gallery</h2>
-                <p>See the real results we strive to achieve for every patient.</p>
+                <h2>Visual Clinic Tour</h2>
+                <p>Step inside our modern facility designed for your comfort and care.</p>
             </div>
-            <div class="comparison-slider">
-                <!-- Bottom Image (Right) -->
-                <img src="afterteeth.png" alt="Teeth After Treatment" class="img-bottom">
-                <!-- Top Image (Left) -->
-                <img src="beforeteeth.png" alt="Teeth Before Treatment" class="img-top" id="comparison-after">
-                <div class="comparison-handle" id="comparison-handle">
-                    <i class="fa-solid fa-arrows-left-right"></i>
+            
+            <div class="tour-carousel-wrapper">
+                <button class="tour-nav-btn tour-prev" aria-label="Previous image">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <div class="tour-carousel">
+                    <div class="tour-inner">
+                        <div class="tour-item">
+                            <img src="reception.jpeg" alt="Clinic Reception">
+                        </div>
+                        <div class="tour-item">
+                            <img src="passage.jpeg" alt="Clinic Passage">
+                        </div>
+                        <div class="tour-item">
+                            <img src="dentistseat.jpeg" alt="Dentist Seat">
+                        </div>
+                        <div class="tour-item">
+                            <img src="dentalchair.jpeg" alt="Dental Chair">
+                        </div>
+                    </div>
                 </div>
+                <button class="tour-nav-btn tour-next" aria-label="Next image">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
             </div>
         </div>
     </section>
@@ -216,11 +249,11 @@
     <!-- Testimonials -->
     <section id="testimonials" class="section bg-light">
         <div class="container">
-            <div class="section-header text-center fade-in-up">
+            <div class="section-header text-center reveal">
                 <h2>Patient Reviews</h2>
                 <p>What our community says about our pain-minimal, patient-friendly care.</p>
             </div>
-            <div class="testimonial-carousel fade-in-up" id="testimonialCarousel">
+            <div class="testimonial-carousel reveal reveal-delay-1" id="testimonialCarousel">
                 <div class="testimonial-card glass-card active-slide">
                     <div class="stars"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i></div>
                     <p class="review-text">"I visited Geetha Dental Clinic for a root-canal treatment and had a very positive experience. Dr. Priya Harsha explained every step clearly, used modern equipment, and made the procedure almost pain-free. The staff was polite and the clinic was very clean. I would definitely recommend this clinic to my family and friends."</p>
@@ -262,13 +295,70 @@
 
     <!-- CTA Banner -->
     <section class="cta-banner">
-        <div class="container text-center fade-in-up">
+        <div class="container text-center reveal">
             <h2>Book your appointment today for a healthier smile</h2>
-            <div class="mt-4">
-                <a href="#contact" class="btn btn-secondary btn-large mr-3">Contact Us Today</a>
+            <div class="mt-4 cta-buttons">
+                <a href="#contact" class="btn btn-secondary btn-large">Contact Us Today</a>
                 <a href="https://wa.me/919035445244" class="btn btn-outline-white btn-large" target="_blank">
                     <i class="fa-brands fa-whatsapp"></i> WhatsApp Us
                 </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Appointment Section -->
+    <section id="appointment" class="section bg-light">
+        <div class="container">
+            <div class="section-header text-center reveal">
+                <h2>Request an Appointment</h2>
+                <p>Fill out the form below with your details and preferred time. We will finalize your booking on WhatsApp.</p>
+            </div>
+            <div class="appointment-form-wrapper glass-card reveal reveal-delay-1">
+                <form id="appointmentForm" class="appointment-form">
+                    <div class="form-group">
+                        <label for="patName">Full Name</label>
+                        <input type="text" id="patName" required placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="patMobile">Mobile Number</label>
+                        <input type="tel" id="patMobile" required placeholder="+91 90354 45244">
+                    </div>
+                    <div class="form-group">
+                        <label for="patDate">Preferred Date</label>
+                        <input type="date" id="patDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="patTime">Preferred Time</label>
+                        <select id="patTime" required>
+                            <option value="" disabled selected>Select a time slot</option>
+                            <optgroup label="Morning (Mon-Fri)">
+                                <option value="10:00 AM">10:00 AM</option>
+                                <option value="10:30 AM">10:30 AM</option>
+                                <option value="11:00 AM">11:00 AM</option>
+                                <option value="11:30 AM">11:30 AM</option>
+                                <option value="12:00 PM">12:00 PM</option>
+                                <option value="12:30 PM">12:30 PM</option>
+                            </optgroup>
+                            <optgroup label="Evening (Mon-Sat)">
+                                <option value="5:00 PM">5:00 PM</option>
+                                <option value="5:30 PM">5:30 PM</option>
+                                <option value="6:00 PM">6:00 PM</option>
+                                <option value="6:30 PM">6:30 PM</option>
+                                <option value="7:00 PM">7:00 PM</option>
+                                <option value="7:30 PM">7:30 PM</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="patProblem">Problem Description</label>
+                        <textarea id="patProblem" rows="4" required placeholder="Briefly describe your dental issue..."></textarea>
+                    </div>
+                    <div class="form-submit full-width text-center mt-4">
+                        <button type="submit" class="btn btn-primary btn-large">
+                            <i class="fa-solid fa-paper-plane"></i> Send Request
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </section>
@@ -277,7 +367,7 @@
     <section id="contact" class="section">
         <div class="container">
             <div class="contact-grid">
-                <div class="contact-info glass-card fade-in-left">
+                <div class="contact-info glass-card reveal">
                     <h2>Visit Our Clinic</h2>
                     <p class="mb-4">We are conveniently located near Wimac Circle, easily accessible from Jalahalli,
                         Kammagondanahalli, Peenya, and Yelahanka.</p>
@@ -288,6 +378,11 @@
                             <h4>Address</h4>
                             <p>No. 2 & 3, 1st Floor, Gurunath Layout,<br>Near Wimac (Factory) Circle, Abbigere Main
                                 Road,<br>Kammagondanahalli – Jalahalli West,<br>Bengaluru – 560 015, Karnataka, India.
+                            <p class="mt-2">
+                                <a href="https://www.google.com/maps/dir/?api=1&destination=13.0679035,77.5304207" 
+                                   target="_blank" class="btn btn-outline btn-small">
+                                   <i class="fa-solid fa-location-dot"></i> Open in Google Maps
+                                </a>
                             </p>
                         </div>
                     </div>
@@ -317,7 +412,7 @@
                     </div>
                 </div>
 
-                <div class="contact-map glass-card fade-in-right">
+                <div class="contact-map glass-card reveal reveal-delay-2">
                     <!-- Embedded Google Map targeting Geetha Dental Clinic exact location -->
                     <iframe src="https://maps.google.com/maps?q=13.0679035,77.5304207&z=17&output=embed" width="100%"
                         height="100%" style="border:0;" allowfullscreen="" loading="lazy"
@@ -334,7 +429,7 @@
                 <a href="#" class="logo mb-3"
                     style="display:inline-flex; background:rgba(255,255,255,0.85); padding:10px; border-radius:8px;">
                     <img src="clinicbannernobg.png" alt="Geetha Dental Clinic Logo"
-                        style="max-height: 50px; width: auto;">
+                        style="max-height: 80px; width: auto;">
                 </a>
                 <p><strong>We help You Smile Better.</strong><br>Your trusted partner for comprehensive dental care in
                     North Bengaluru for over 22 years.</p>
@@ -374,6 +469,12 @@
         </div>
     </footer>
 
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <!-- Firebase SDK (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
     <script src="script.js"></script>
 </body>
 

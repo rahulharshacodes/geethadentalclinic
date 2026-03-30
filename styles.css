@@ -1,27 +1,36 @@
-/* CSS Reset & Variables */
 :root {
-    --primary: #2EA3F2; /* Soft blue from logo spec */
-    --primary-hover: #1c88d4;
-    --secondary: #5BC28B; /* Soft green */
-    --secondary-hover: #4bad76;
-    --bg-main: #ffffff;
-    --bg-light: #f4f7fb;
-    --text-dark: #1e293b;
-    --text-body: #475569;
-    --text-muted: #94a3b8;
+    /* Sophisticated HSL-based Palette */
+    --primary-h: 204;
+    --primary-s: 89%;
+    --primary-l: 57%;
+    --primary: hsl(var(--primary-h), var(--primary-s), var(--primary-l));
+    --primary-hover: hsl(var(--primary-h), var(--primary-s), 45%);
+    --primary-light: hsl(var(--primary-h), var(--primary-s), 95%);
     
-    --radius-lg: 24px;
-    --radius-md: 16px;
+    --secondary-h: 145;
+    --secondary-s: 48%;
+    --secondary-l: 56%;
+    --secondary: hsl(var(--secondary-h), var(--secondary-s), var(--secondary-l));
+    
+    --bg-main: #ffffff;
+    --bg-light: #f8fafc;
+    --text-dark: #0f172a;
+    --text-body: #334155;
+    --text-muted: #64748b;
+    
+    --radius-xl: 32px;
+    --radius-lg: 20px;
+    --radius-md: 12px;
     --radius-sm: 8px;
     
-    --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
-    --shadow-hover: 0 20px 40px -10px rgba(0, 0, 0, 0.1);
+    --shadow-premium: 0 20px 50px -12px rgba(15, 23, 42, 0.08);
+    --shadow-hover: 0 30px 60px -12px rgba(15, 23, 42, 0.12);
     
-    --glass-bg: rgba(255, 255, 255, 0.85);
-    --glass-border: 1px solid rgba(255, 255, 255, 0.6);
-    --glass-blur: blur(12px);
+    --glass-bg: rgba(255, 255, 255, 0.8);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+    --glass-blur: blur(20px);
     
-    --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    --transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 * {
@@ -150,19 +159,57 @@ ul { list-style: none; }
     color: var(--secondary);
 }
 
-/* Glass Card */
+/* Glass Card & Section Polish */
 .glass-card {
-    background: var(--bg-main);
+    background: white;
     border-radius: var(--radius-lg);
-    padding: 32px;
-    box-shadow: var(--shadow-soft);
-    border: 1px solid rgba(0,0,0,0.03);
+    padding: 40px;
+    box-shadow: var(--shadow-premium);
+    border: 1px solid rgba(241, 245, 249, 1);
     transition: var(--transition);
+    position: relative;
+    overflow: hidden;
 }
+
 .glass-card:hover {
     box-shadow: var(--shadow-hover);
-    transform: translateY(-5px);
+    transform: translateY(-8px);
 }
+
+.glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.glass-card:hover::before {
+    opacity: 1;
+}
+
+/* Entrance Animations */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.reveal {
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.reveal-delay-1 { animation-delay: 0.2s; }
+.reveal-delay-2 { animation-delay: 0.4s; }
+.reveal-delay-3 { animation-delay: 0.6s; }
 
 /* Sticky Navbar */
 .navbar {
@@ -249,9 +296,9 @@ ul { list-style: none; }
 }
 
 .mobile-nav {
-    display: none;
+    display: flex;
     position: fixed;
-    top: 76px;
+    top: 90px; /* Adjust based on navbar height */
     left: 0;
     width: 100%;
     background: var(--bg-main);
@@ -261,12 +308,14 @@ ul { list-style: none; }
     z-index: 999;
     transform: translateY(-10px);
     opacity: 0;
+    visibility: hidden;
     pointer-events: none;
     transition: var(--transition);
 }
 .mobile-nav.active {
     transform: translateY(0);
     opacity: 1;
+    visibility: visible;
     pointer-events: auto;
 }
 .mobile-nav a {
@@ -431,10 +480,11 @@ ul { list-style: none; }
     align-items: center;
 }
 .dentist-image img {
-    width: 300px;
-    height: 400px;
+    width: 350px;
+    height: 480px;
     object-fit: cover;
     border-radius: var(--radius-md);
+    box-shadow: var(--shadow-soft);
 }
 .degree {
     font-size: 1.2rem;
@@ -518,6 +568,124 @@ ul { list-style: none; }
 }
 .comparison-handle::before { top: 40px; }
 .comparison-handle::after { bottom: 40px; }
+
+/* Gallery Subsections */
+.gallery-subsection {
+    margin-top: 60px;
+}
+.subsection-title {
+    font-size: 1.5rem;
+    margin-bottom: 30px;
+    color: var(--primary);
+    position: relative;
+    display: inline-block;
+}
+.subsection-title::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 40px;
+    height: 3px;
+    background: var(--secondary);
+    border-radius: 2px;
+}
+
+/* Visual Clinic Tour Carousel */
+.tour-carousel-wrapper {
+    position: relative;
+    max-width: 1000px;
+    margin: 40px auto 0;
+    padding: 0 60px;
+}
+
+.tour-carousel {
+    overflow: hidden;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-hover);
+    background: #f1f5f9;
+}
+
+.tour-inner {
+    display: flex;
+    align-items: center; /* Center images vertically in the frame */
+    width: 400%;
+    transition: transform 0.6s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.tour-item {
+    width: 25%;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center; /* Center content vertically */
+    background: #fff;
+    min-height: 400px; /* Ensure a consistent minimum frame height */
+}
+
+.tour-item img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 600px;
+    display: block;
+}
+
+.tour-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50px;
+    height: 50px;
+    background: white;
+    border: none;
+    border-radius: 50%;
+    box-shadow: var(--shadow-soft);
+    color: var(--primary);
+    font-size: 1.25rem;
+    cursor: pointer;
+    z-index: 10;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tour-nav-btn:hover {
+    background: var(--primary);
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.tour-prev { left: 0; }
+.tour-next { right: 0; }
+
+@media (max-width: 768px) {
+    .tour-carousel-wrapper { 
+        padding: 0 40px; 
+    }
+    .tour-carousel {
+        background: #fff;
+    }
+    .tour-item img { 
+        height: auto; 
+        max-height: none; /* Show full image as requested */
+        width: 100%;
+        object-fit: contain;
+    }
+    .tour-nav-btn { 
+        width: 32px; 
+        height: 32px; 
+        background: white; 
+        border: 1px solid #ddd;
+    }
+}
+
+#results {
+    background-color: var(--bg-light);
+    padding: 80px 0;
+}
 
 /* Testimonials */
 .testimonial-carousel {
@@ -608,6 +776,12 @@ ul { list-style: none; }
 .cta-banner h2 {
     color: white;
 }
+.cta-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
 
 /* Contact Section */
 .contact-grid {
@@ -642,6 +816,51 @@ ul { list-style: none; }
     min-height: 400px;
     padding: 0;
     overflow: hidden;
+}
+
+/* Appointment Form */
+.appointment-form-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+}
+.appointment-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+.appointment-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.appointment-form .full-width {
+    grid-column: 1 / -1;
+}
+.appointment-form label {
+    font-weight: 600;
+    color: var(--text-dark);
+    font-size: 0.95rem;
+}
+.appointment-form input,
+.appointment-form select,
+.appointment-form textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--text-dark);
+    background: rgba(255,255,255,0.7);
+    transition: var(--transition);
+}
+.appointment-form input:focus,
+.appointment-form select:focus,
+.appointment-form textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(46, 163, 242, 0.2);
+    background: white;
 }
 
 /* Footer */
@@ -716,10 +935,71 @@ ul { list-style: none; }
 
 @media (max-width: 768px) {
     .nav-links, .nav-actions .btn { display: none; }
-    .mobile-menu-btn { display: block; }
+    .mobile-menu-btn { 
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border-radius: 50%;
+        background: rgba(46, 163, 242, 0.1);
+        color: var(--primary);
+    }
     .hero-bg img { object-position: right; }
     .hero-overlay { background: linear-gradient(0deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.8) 100%); }
     .contact-grid { grid-template-columns: 1fr; }
     .footer-grid { grid-template-columns: 1fr; }
     .comparison-slider img, .comparison-after img { width: 100%; max-width: 100%; }
+    .appointment-form { grid-template-columns: 1fr; }
+}
+
+/* ─── Toast Notification ─── */
+.toast {
+    position: fixed;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(-120%);
+    padding: 16px 32px;
+    border-radius: var(--radius-sm);
+    font-weight: 600;
+    font-size: 1rem;
+    z-index: 9999;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    pointer-events: none;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+    max-width: 90%;
+    text-align: center;
+}
+.toast-show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+.toast-success {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    color: white;
+}
+.toast-error {
+    background: linear-gradient(135deg, #f87171, #ef4444);
+    color: white;
+}
+
+/* ─── Form Validation Errors ─── */
+.input-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+.field-error {
+    color: #ef4444;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+/* ─── Button Loading State ─── */
+.appointment-form button[disabled] {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
 }
