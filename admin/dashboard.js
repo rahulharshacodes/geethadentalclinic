@@ -295,6 +295,8 @@ function renderAppointmentsUI() {
             const nameMatch = (data.name || '').toLowerCase().includes(searchTerm);
             const phoneMatch = (data.phone || '').toLowerCase().includes(searchTerm);
             
+            const problemEnc = encodeURIComponent(data.problem || 'No description provided.');
+            
             if (searchTerm === '' || nameMatch || phoneMatch) {
                 htmlAll += `
                     <tr>
@@ -304,10 +306,17 @@ function renderAppointmentsUI() {
                         <td>${data.time}</td>
                         <td><span class="status-pill status-${data.status}">${data.status}</span></td>
                         <td>
-                            ${data.status === 'pending' ? `
-                                <button class="btn btn-sm btn-success" onclick="updateApptStatus('${id}', 'confirmed')">Confirm</button>
-                                <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="updateApptStatus('${id}', 'rejected')">Reject</button>
-                            ` : '-'}
+                            <div style="display:flex; align-items:center;">
+                                ${data.status === 'pending' ? `
+                                    <button class="btn btn-sm btn-success" onclick="updateApptStatus('${id}', 'confirmed')">Confirm</button>
+                                    <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="updateApptStatus('${id}', 'rejected')">Reject</button>
+                                ` : `
+                                    <button class="btn btn-sm" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 8px; font-size:0.8rem;" onclick="updateApptStatus('${id}', 'pending')"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+                                `}
+                                <button class="btn btn-sm" style="margin-left:12px; border-radius:50%; width:32px; height:32px; padding:0; background:#f1f5f9; color:#475569;" onclick="viewProblem('${problemEnc}')" title="View Problem">
+                                    <i class="fa-solid fa-file-waveform"></i>
+                                </button>
+                            </div>
                         </td>
                     </tr>
                 `;
@@ -336,7 +345,10 @@ function renderAppointmentsUI() {
                             ${(!isPresent && !isAbsent) ? `
                                 <button class="btn btn-sm btn-primary" onclick="markAttendance('${id}', 'present', '${data.name}', '${data.phone}')">Present</button>
                                 <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="markAttendance('${id}', 'absent')">Absent</button>
-                            ` : `<span class="status-pill ${isPresent ? 'status-confirmed' : 'status-rejected'}">${(data.attendance || '').toUpperCase()}</span>`}
+                            ` : `
+                                <span class="status-pill ${isPresent ? 'status-confirmed' : 'status-rejected'}">${(data.attendance || '').toUpperCase()}</span>
+                                <button class="btn btn-sm" style="margin-left:8px; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 8px; font-size:0.8rem;" onclick="markAttendance('${id}', null, '${data.name}')"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+                            `}
                             <button class="btn btn-sm" style="margin-left:12px; border-radius:50%; width:32px; height:32px; padding:0; background:#f1f5f9; color:#475569;" onclick="viewProblem('${problemEnc}')" title="View Problem">
                                 <i class="fa-solid fa-file-waveform"></i>
                             </button>
@@ -418,8 +430,14 @@ window.markAttendance = async (apptId, status, name, phone) => {
                 }]);
             if (patError) throw patError;
             showToast('Patient marked present & added to directory', 'success');
-        } else {
+        } else if (status === 'absent') {
             showToast('Patient marked absent', 'success');
+        } else if (status === null) {
+            if (name) {
+                // Remove the generated patient record if they mistakenly clicked present
+                await supabase.from('patients').delete().match({ name: name, visitdate: currentDateStr });
+            }
+            showToast('Attendance action reverted', 'success');
         }
     } catch (e) {
         console.error(e);
