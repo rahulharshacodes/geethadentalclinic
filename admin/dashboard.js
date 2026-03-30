@@ -15,7 +15,8 @@ const ui = {
     sections: document.querySelectorAll('.dashboard-section'),
     sectionTitle: document.getElementById('section-title'),
     sectionSubtitle: document.getElementById('section-subtitle'),
-    currentDateText: document.getElementById('current-date-text'),
+    datePicker: document.getElementById('overview-datepicker'),
+    statAbsent: document.getElementById('stat-absent-patients'),
     badge: document.getElementById('appointment-badge'),
 
     // Modals
@@ -51,10 +52,14 @@ const ui = {
     tNotes: document.getElementById('treatment-notes')
 };
 
-// Format Date string
-function formatDateText() {
-    const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-    ui.currentDateText.textContent = new Date().toLocaleDateString('en-US', options);
+// Initialize Date Control
+function initDateControl() {
+    ui.datePicker.value = currentDateStr;
+    ui.datePicker.addEventListener('change', (e) => {
+        currentDateStr = e.target.value;
+        renderAppointmentsUI();
+        renderPatientsUI();
+    });
 }
 
 // Clear all listeners (on logout)
@@ -65,7 +70,7 @@ function clearListeners() {
 
 // ─── INIT ───
 document.addEventListener('auth-success', () => {
-    formatDateText();
+    initDateControl();
     initGlobalListeners();
     switchSection('overview');
 });
@@ -245,6 +250,7 @@ function renderPaymentsUI() {
 function renderAppointmentsUI() {
     let pendingCount = 0;
     let todayCount = 0;
+    let absentCount = 0;
     let htmlAll = '';
     let htmlToday = '';
 
@@ -275,8 +281,10 @@ function renderAppointmentsUI() {
             `;
         }
 
-        // Render Overview Queue (Only today's, non-rejected)
-        if (data.date === currentDateStr && data.status !== 'rejected') {
+        if (data.date === currentDateStr && data.attendance === 'absent') absentCount++;
+
+        // Render Overview Queue (Only selected date's confirmed)
+        if (data.date === currentDateStr && data.status === 'confirmed') {
             const isPresent = data.attendance === 'present';
             const isAbsent = data.attendance === 'absent';
             
@@ -297,10 +305,11 @@ function renderAppointmentsUI() {
     });
 
     ui.appointmentsTable.innerHTML = htmlAll || '<tr><td colspan="6" style="text-align:center;">No appointments found here.</td></tr>';
-    ui.overviewQueue.innerHTML = htmlToday || '<tr><td colspan="4" style="text-align:center;">No appointments scheduled for today.</td></tr>';
+    ui.overviewQueue.innerHTML = htmlToday || '<tr><td colspan="4" style="text-align:center;">No confirmed appointments for this date.</td></tr>';
     
     ui.statTodayAppts.textContent = todayCount;
     ui.statPendingConfirm.textContent = pendingCount;
+    if (ui.statAbsent) ui.statAbsent.textContent = absentCount;
     
     if (pendingCount > 0) {
         ui.badge.textContent = pendingCount;

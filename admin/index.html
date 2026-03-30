@@ -21,7 +21,7 @@
     <div id="login-page" class="auth-wrapper">
         <div class="auth-card">
             <div class="auth-header">
-                <img src="/admin/../cliniclogonobg.png" alt="Geetha Dental Clinic Logo" class="auth-logo">
+                <img src="/admin/../clinicbannernobg.png" alt="Geetha Dental Clinic Logo" class="auth-logo" style="width: 220px; height: auto; border-radius: 0; margin-bottom: 8px;">
                 <h1>Admin Login</h1>
                 <p>Welcome back! Please login to your account.</p>
             </div>
@@ -52,9 +52,8 @@
     <div id="app" class="dashboard-layout" style="display: none;">
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <img src="/admin/../cliniclogonobg.png" alt="Logo" class="sidebar-logo">
-                <span class="clinic-name">Geetha Dental</span>
+            <div class="sidebar-header" style="justify-content: center; padding: 24px 20px;">
+                <img src="/admin/../clinicbannernobg.png" alt="Logo" class="sidebar-logo" style="width: 100%; max-width: 180px; height: auto; border-radius: 0; margin-right: 0;">
             </div>
             <nav class="sidebar-nav">
                 <ul>
@@ -119,9 +118,8 @@
                     <p id="section-subtitle">Monitor today's activity and patient queue.</p>
                 </div>
                 <div class="header-right">
-                    <div class="date-display">
-                        <i class="fa-regular fa-calendar"></i>
-                        <span id="current-date-text">March 30, 2026</span>
+                    <div class="date-display" style="padding: 0; background: transparent; border: none;">
+                        <input type="date" id="overview-datepicker" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-weight: 500; color: var(--text-color); background: white; cursor: pointer; outline: none; font-size: 0.9rem;">
                     </div>
                 </div>
             </header>
@@ -157,11 +155,20 @@
                                 <h3 id="stat-pending-confirm">0</h3>
                             </div>
                         </div>
+                        <div class="stat-card" style="border-left: 4px solid var(--danger-color);">
+                            <div class="stat-icon red" style="background:#fee2e2; color:var(--danger-color);">
+                                <i class="fa-solid fa-user-xmark"></i>
+                            </div>
+                            <div class="stat-info">
+                                <span class="stat-label">Absent Patients</span>
+                                <h3 id="stat-absent-patients">0</h3>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="data-container">
                         <div class="container-header">
-                            <h3><i class="fa-solid fa-list-ul"></i> Today's Patient Queue</h3>
+                            <h3><i class="fa-solid fa-list-ul"></i> Today's Patients</h3>
                         </div>
                         <div class="table-responsive">
                             <table id="today-queue-table">
