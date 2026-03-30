@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" type="image/png" href="../cliniclogonobg.png">
     <link rel="stylesheet" href="/admin/admin-styles.css">
 </head>
 <body>
@@ -53,7 +54,7 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="sidebar-header" style="justify-content: center; padding: 24px 20px;">
-                <img src="/admin/../clinicbannernobg.png" alt="Logo" class="sidebar-logo" style="width: 100%; max-width: 180px; height: auto; border-radius: 0; margin-right: 0;">
+                <img src="/admin/../clinicbannernobg.png" alt="Logo" class="sidebar-logo" style="width: 100%; max-width: 220px; height: auto; border-radius: 0; margin-right: 0;">
             </div>
             <nav class="sidebar-nav">
                 <ul>
@@ -118,15 +119,20 @@
                     <p id="section-subtitle">Monitor today's activity and patient queue.</p>
                 </div>
                 <div class="header-right">
-                    <div class="date-display" style="padding: 0; background: transparent; border: none;">
-                        <input type="date" id="overview-datepicker" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; font-weight: 500; color: var(--text-color); background: white; cursor: pointer; outline: none; font-size: 0.9rem;">
+                    <div class="date-display" style="position: relative; padding: 0; background: transparent; border: none; display: flex; align-items: center;">
+                        <button id="date-label-btn" style="background: white; border: 1px solid var(--border-color); border-radius: 8px; padding: 8px 16px; font-family: inherit; font-weight: 600; color: var(--primary-color); cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.95rem;">
+                            <i class="fa-regular fa-calendar"></i>
+                            <span id="date-label-text">Today</span>
+                            <i class="fa-solid fa-chevron-down" style="font-size: 0.8em; margin-left: 4px; color: #94a3b8;"></i>
+                        </button>
+                        <input type="date" id="overview-datepicker" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; top: 0; left: 0;">
                     </div>
                 </div>
             </header>
 
             <div class="content-body">
                 <!-- Section: Overview -->
-                <section id="section-overview" class="dashboard-section active">
+                <section id="section-overview" class="dashboard-section active overview-enlarged">
                     <div class="stats-grid">
                         <div class="stat-card">
                             <div class="stat-icon blue">
@@ -146,15 +152,6 @@
                                 <h3 id="stat-patients-present">0</h3>
                             </div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-icon orange">
-                                <i class="fa-solid fa-clock"></i>
-                            </div>
-                            <div class="stat-info">
-                                <span class="stat-label">Pending Confirmation</span>
-                                <h3 id="stat-pending-confirm">0</h3>
-                            </div>
-                        </div>
                         <div class="stat-card" style="border-left: 4px solid var(--danger-color);">
                             <div class="stat-icon red" style="background:#fee2e2; color:var(--danger-color);">
                                 <i class="fa-solid fa-user-xmark"></i>
@@ -163,6 +160,17 @@
                                 <span class="stat-label">Absent Patients</span>
                                 <h3 id="stat-absent-patients">0</h3>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="overview-funnel" style="margin-bottom: 24px; background: white; padding: 16px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 500; font-size: 0.95rem; color: var(--text-color);">
+                            <span>Patient Flow Progress</span>
+                            <span id="funnel-text" style="font-weight: 600;">0 / 0 Present</span>
+                        </div>
+                        <div style="display: flex; width: 100%; height: 12px; border-radius: 6px; overflow: hidden; background: #e2e8f0;">
+                            <div id="funnel-present" style="width: 0%; background: var(--success-color); transition: width 0.3s ease;"></div>
+                            <div id="funnel-absent" style="width: 0%; background: var(--danger-color); transition: width 0.3s ease;"></div>
                         </div>
                     </div>
 
@@ -425,6 +433,20 @@
                 </div>
                 <button type="submit" class="btn btn-success btn-block">Confirm Payment</button>
             </form>
+        </div>
+
+        <!-- Problem Description Modal -->
+        <div id="modal-view-problem" class="modal-card" style="display:none; max-width: 400px;">
+            <div class="modal-header">
+                <h3>Problem Description</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 24px; font-size: 1.05rem; line-height: 1.6;">
+                <p id="problem-text-display" style="margin: 0;">Loading...</p>
+            </div>
+            <div class="modal-footer" style="padding: 16px; border-top: 1px solid var(--border-color); text-align: right;">
+                <button class="btn btn-secondary close-modal" style="width: auto;">Close</button>
+            </div>
         </div>
     </div>
 

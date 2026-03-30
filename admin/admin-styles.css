@@ -625,6 +625,34 @@ tr:hover td {
     gap: 24px;
 }
 
+/* ─── Overview Redesign Sizing ─── */
+.overview-enlarged {
+    font-size: 1.05rem;
+}
+.overview-enlarged .stat-card {
+    padding: 28px;
+    gap: 24px;
+}
+.overview-enlarged .stat-icon {
+    width: 64px;
+    height: 64px;
+    font-size: 1.7rem;
+    border-radius: 20px;
+}
+.overview-enlarged .stat-label {
+    font-size: 0.95rem;
+}
+.overview-enlarged .stat-info h3 {
+    font-size: 1.7rem;
+}
+.overview-enlarged .container-header {
+    padding: 28px 24px;
+}
+.overview-enlarged table th, .overview-enlarged table td {
+    padding: 20px 24px;
+    font-size: 0.95rem;
+}
+
 /* ─── Animations ─── */
 @keyframes fadeIn {
     from { opacity: 0; }

@@ -16,7 +16,11 @@ const ui = {
     sectionTitle: document.getElementById('section-title'),
     sectionSubtitle: document.getElementById('section-subtitle'),
     datePicker: document.getElementById('overview-datepicker'),
+    dateLabelText: document.getElementById('date-label-text'),
     statAbsent: document.getElementById('stat-absent-patients'),
+    funnelText: document.getElementById('funnel-text'),
+    funnelPresent: document.getElementById('funnel-present'),
+    funnelAbsent: document.getElementById('funnel-absent'),
     badge: document.getElementById('appointment-badge'),
 
     // Modals
@@ -34,7 +38,7 @@ const ui = {
     // Stat Cards
     statTodayAppts: document.getElementById('stat-today-appts'),
     statPatientsPresent: document.getElementById('stat-patients-present'),
-    statPendingConfirm: document.getElementById('stat-pending-confirm'),
+    statPatientsPresent: document.getElementById('stat-patients-present'),
     statTotalRev: document.getElementById('stat-total-revenue'),
     statMonthlyInc: document.getElementById('stat-monthly-income'),
     
@@ -53,10 +57,23 @@ const ui = {
 };
 
 // Initialize Date Control
+function updateDateLabel() {
+    if (!ui.dateLabelText) return;
+    const todayStr = new Date().toISOString().split('T')[0];
+    if (currentDateStr === todayStr) {
+        ui.dateLabelText.textContent = "Today";
+    } else {
+        const d = new Date(currentDateStr);
+        ui.dateLabelText.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+}
+
 function initDateControl() {
     ui.datePicker.value = currentDateStr;
+    updateDateLabel();
     ui.datePicker.addEventListener('change', (e) => {
         currentDateStr = e.target.value;
+        updateDateLabel();
         renderAppointmentsUI();
         renderPatientsUI();
     });
@@ -251,6 +268,9 @@ function renderAppointmentsUI() {
     let pendingCount = 0;
     let todayCount = 0;
     let absentCount = 0;
+    let queuePresent = 0;
+    let queueAbsent = 0;
+    let queueTotal = 0;
     let htmlAll = '';
     let htmlToday = '';
 
@@ -285,8 +305,13 @@ function renderAppointmentsUI() {
 
         // Render Overview Queue (Only selected date's confirmed)
         if (data.date === currentDateStr && data.status === 'confirmed') {
+            queueTotal++;
             const isPresent = data.attendance === 'present';
             const isAbsent = data.attendance === 'absent';
+            if (isPresent) queuePresent++;
+            if (isAbsent) queueAbsent++;
+            
+            const problemEnc = encodeURIComponent(data.problem || 'No description provided.');
             
             htmlToday += `
                 <tr>
@@ -294,10 +319,15 @@ function renderAppointmentsUI() {
                     <td>${data.time}</td>
                     <td>${data.phone}</td>
                     <td>
-                        ${(!isPresent && !isAbsent) ? `
-                            <button class="btn btn-sm btn-primary" onclick="markAttendance('${id}', 'present', '${data.name}', '${data.phone}')">Present</button>
-                            <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="markAttendance('${id}', 'absent')">Absent</button>
-                        ` : `<span class="status-pill ${isPresent ? 'status-confirmed' : 'status-rejected'}">${(data.attendance || '').toUpperCase()}</span>`}
+                        <div style="display:flex; align-items:center;">
+                            ${(!isPresent && !isAbsent) ? `
+                                <button class="btn btn-sm btn-primary" onclick="markAttendance('${id}', 'present', '${data.name}', '${data.phone}')">Present</button>
+                                <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="markAttendance('${id}', 'absent')">Absent</button>
+                            ` : `<span class="status-pill ${isPresent ? 'status-confirmed' : 'status-rejected'}">${(data.attendance || '').toUpperCase()}</span>`}
+                            <button class="btn btn-sm" style="margin-left:12px; border-radius:50%; width:32px; height:32px; padding:0; background:#f1f5f9; color:#475569;" onclick="viewProblem('${problemEnc}')" title="View Problem">
+                                <i class="fa-solid fa-file-waveform"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -308,8 +338,16 @@ function renderAppointmentsUI() {
     ui.overviewQueue.innerHTML = htmlToday || '<tr><td colspan="4" style="text-align:center;">No confirmed appointments for this date.</td></tr>';
     
     ui.statTodayAppts.textContent = todayCount;
-    ui.statPendingConfirm.textContent = pendingCount;
     if (ui.statAbsent) ui.statAbsent.textContent = absentCount;
+    
+    // Funnel Logic
+    if (ui.funnelText && ui.funnelPresent && ui.funnelAbsent) {
+        ui.funnelText.textContent = `${queuePresent} / ${queueTotal} Present`;
+        const pctP = queueTotal > 0 ? (queuePresent / queueTotal) * 100 : 0;
+        const pctA = queueTotal > 0 ? (queueAbsent / queueTotal) * 100 : 0;
+        ui.funnelPresent.style.width = `${pctP}%`;
+        ui.funnelAbsent.style.width = `${pctA}%`;
+    }
     
     if (pendingCount > 0) {
         ui.badge.textContent = pendingCount;
@@ -377,6 +415,18 @@ window.selectPatientForTreatment = (id, name) => {
     ui.tDetails.value = '';
     ui.tMeds.value = '';
     ui.tNotes.value = '';
+}
+
+window.viewProblem = (problemEnc) => {
+    const pText = document.getElementById('problem-text-display');
+    const problemModal = document.getElementById('modal-view-problem');
+    if (pText && problemModal) {
+        pText.textContent = decodeURIComponent(problemEnc);
+        ui.modalContainer.style.display = 'flex';
+        problemModal.style.display = 'block';
+        if (ui.modalAddPatient) ui.modalAddPatient.style.display = 'none';
+        if (ui.modalAddPayment) ui.modalAddPayment.style.display = 'none';
+    }
 }
 
 // ─── EVENT LISTENERS ───
