@@ -499,16 +499,38 @@ function renderCharts() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Income Trend Chart (Mock historic data + Current Month)
+    // Income Trend Chart (Live Data Grouped by Month)
+    const monthlyRev = {};
+    _cachedPayments.forEach(data => {
+        if(data.createdat) {
+            const d = new Date(data.createdat);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            monthlyRev[key] = (monthlyRev[key] || 0) + (Number(data.amount) || 0);
+        }
+    });
+    
+    // Sort keys chronologically
+    const sortedKeys = Object.keys(monthlyRev).sort();
+    const incomeLabels = sortedKeys.map(k => {
+        const [y, m] = k.split('-');
+        return new Date(y, m - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
+    });
+    const incomeData = sortedKeys.map(k => monthlyRev[k]);
+
+    if(incomeLabels.length === 0) {
+        incomeLabels.push('No Live Data');
+        incomeData.push(0);
+    }
+
     const incCanvas = document.getElementById('incomeTrendChart');
     if(charts.inc) charts.inc.destroy();
     charts.inc = new Chart(incCanvas, {
         type: 'line',
         data: {
-            labels: ['October', 'November', 'December', 'January', 'February', 'Current'],
+            labels: incomeLabels,
             datasets: [{
                 label: 'Monthly Income (₹)',
-                data: [35000, 48000, 42000, 56000, 51000, parseInt(ui.statMonthlyInc.innerText.replace(/[^0-9]/g, '')) || 0],
+                data: incomeData,
                 borderColor: primary,
                 backgroundColor: primaryLight,
                 tension: 0.4,
@@ -518,10 +540,13 @@ function renderCharts() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Appointment Status Pie Chart
-    let conf = 45; // base mock to always show a chart slice
-    let pending = parseInt(ui.statPendingConfirm.innerText) || 0;
-    let rej = 5;
+    // Appointment Status Pie Chart (Live Data Only)
+    let conf = 0, pending = 0, rej = 0;
+    _cachedAppts.forEach(d => {
+        if(d.status === 'confirmed') conf++;
+        else if(d.status === 'pending') pending++;
+        else if(d.status === 'rejected') rej++;
+    });
 
     const appCanvas = document.getElementById('appointmentStatusChart');
     if(charts.app) charts.app.destroy();
@@ -538,21 +563,48 @@ function renderCharts() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Daily Traffic Chart
-    const currentPatients = parseInt(ui.statPatientsPresent.innerText) || 0;
+    // Daily Traffic Chart (Last 7 Days - Live Data Only)
+    const trafficLabels = [];
+    const trafficData = [];
+    
+    // Setup last 7 days array
+    for(let i=6; i>=0; i--) {
+        const d = new Date();
+        d.setDate(d.getDate() - i);
+        trafficLabels.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }));
+        trafficData.push(0);
+    }
+
+    _cachedPatients.forEach(p => {
+        const d = p.createdat ? new Date(p.createdat) : null;
+        if(d) {
+            d.setHours(0,0,0,0);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            const diffTime = today - d;
+            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+            
+            if(diffDays >= 0 && diffDays <= 6) {
+                // Map the difference back to the array index (6 is today, 0 is 6 days ago)
+                const index = 6 - diffDays;
+                trafficData[index]++;
+            }
+        }
+    });
+
     const trafficCanvas = document.getElementById('dailyTrafficChart');
     if(charts.tra) charts.tra.destroy();
     charts.tra = new Chart(trafficCanvas, {
         type: 'bar',
         data: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Today'],
+            labels: trafficLabels,
             datasets: [{
-                label: 'Patient Count',
-                data: [18, 22, 14, 25, 20, currentPatients],
+                label: 'Patient Registrations',
+                data: trafficData,
                 backgroundColor: success,
                 borderRadius: 4
             }]
         },
-        options: { responsive: true, maintainAspectRatio: false }
+        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
     });
 }
