@@ -18,9 +18,7 @@ const ui = {
     datePicker: document.getElementById('overview-datepicker'),
     dateLabelText: document.getElementById('date-label-text'),
     statAbsent: document.getElementById('stat-absent-patients'),
-    funnelText: document.getElementById('funnel-text'),
-    funnelPresent: document.getElementById('funnel-present'),
-    funnelAbsent: document.getElementById('funnel-absent'),
+    flowStatusText: document.getElementById('flow-status-text'),
     badge: document.getElementById('appointment-badge'),
 
     // Modals
@@ -213,7 +211,7 @@ function renderPatientsUI() {
         `;
 
         // Today's patients go to treatments list and payment dropdown
-        if (data.visitDate === currentDateStr) {
+        if (data.visitdate === currentDateStr) {
             presentCount++;
             activeTreatmentsHtml += `
                 <li class="active-patient-item" onclick="selectPatientForTreatment('${id}', '${data.name}')">
@@ -340,13 +338,27 @@ function renderAppointmentsUI() {
     ui.statTodayAppts.textContent = todayCount;
     if (ui.statAbsent) ui.statAbsent.textContent = absentCount;
     
-    // Funnel Logic
-    if (ui.funnelText && ui.funnelPresent && ui.funnelAbsent) {
-        ui.funnelText.textContent = `${queuePresent} / ${queueTotal} Present`;
-        const pctP = queueTotal > 0 ? (queuePresent / queueTotal) * 100 : 0;
-        const pctA = queueTotal > 0 ? (queueAbsent / queueTotal) * 100 : 0;
-        ui.funnelPresent.style.width = `${pctP}%`;
-        ui.funnelAbsent.style.width = `${pctA}%`;
+    // Flow Donut Logic
+    if (ui.flowStatusText) {
+        ui.flowStatusText.textContent = `${queueTotal} Total Appts`;
+        const flowCanvas = document.getElementById('flowDonutChart');
+        if (flowCanvas) {
+            if (charts.flow) charts.flow.destroy();
+            const unarrived = queueTotal - queuePresent - queueAbsent;
+            charts.flow = new Chart(flowCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Present', 'Absent', 'Expected'],
+                    datasets: [{
+                        data: [queuePresent, queueAbsent, unarrived > 0 ? unarrived : 0],
+                        backgroundColor: ['#10b981', '#ef4444', '#e2e8f0'],
+                        borderWidth: 0,
+                        cutout: '70%'
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: true } } }
+            });
+        }
     }
     
     if (pendingCount > 0) {
@@ -386,7 +398,7 @@ window.markAttendance = async (apptId, status, name, phone) => {
                 .insert([{
                     name: name,
                     phone: phone,
-                    visitDate: currentDateStr,
+                    visitdate: currentDateStr,
                     notes: 'Arrived for appointment.'
                 }]);
             if (patError) throw patError;
