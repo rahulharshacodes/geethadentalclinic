@@ -1,15 +1,8 @@
-// ─── Firebase Configuration ───
-const firebaseConfig = {
-    apiKey: "AIzaSyCuF0GhgPpX66GgLhfafHmY0EkkZwzXg08",
-    authDomain: "geetha-dental.firebaseapp.com",
-    projectId: "geetha-dental",
-    storageBucket: "geetha-dental.firebasestorage.app",
-    messagingSenderId: "1025837340529",
-    appId: "1:1025837340529:web:12693de92e19a655a308d0"
-};
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const supabaseUrl = "https://njxoxiirdpfhxxtmrkci.supabase.co";
+const supabaseKey = "sb_publishable_yKryW-vuqCcOUx2ULTO4XA_ErDKBCCx";
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // ─── Toast Notification ───
 function showToast(message, type = 'success') {
@@ -277,15 +270,15 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
 
             try {
-                await db.collection('appointments').add({
+                const { error } = await supabase.from('appointments').insert([{
                     name: name,
                     phone: phoneClean, // Store cleaned number
                     date: date,
                     time: time,
                     problem: document.getElementById('patProblem').value.trim() || 'No description',
-                    status: 'pending',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                    status: 'pending'
+                }]);
+                if (error) throw error;
 
                 showToast('Appointment request sent! We will confirm shortly.', 'success');
                 appointmentForm.reset();
