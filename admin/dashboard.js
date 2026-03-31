@@ -817,7 +817,8 @@ document.getElementById('add-payment-form').addEventListener('submit', async (e)
                 patientid: patId,
                 patientname: patName,
                 amount: Number(document.getElementById('payment-amount').value),
-                method: document.getElementById('payment-method').value
+                method: document.getElementById('payment-method').value,
+                createdat: currentDateStr // Record on the selected dashboard date
             }]);
         if (error) throw error;
         showToast('Payment successful', 'success');
@@ -975,35 +976,6 @@ function renderCharts() {
     const warning = '#f59e0b';
     const danger = '#ef4444';
 
-    // Payment Methods Pie Chart
-    let cash = 0, upi = 0, card = 0;
-    _cachedPayments.forEach(data => {
-        if (!data.createdat) return;
-        const d = new Date(data.createdat);
-        const payDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-        if (payDateStr !== currentDateStr) return;
-        
-        const method = data.method;
-        if(method === 'Cash') cash++;
-        else if(method === 'UPI') upi++;
-        else if(method === 'Card') card++;
-    });
-
-    const pmCanvas = document.getElementById('paymentMethodChart');
-    if(charts.pm) charts.pm.destroy();
-    charts.pm = new Chart(pmCanvas, {
-        type: 'doughnut',
-        data: {
-            labels: ['Cash', 'UPI', 'Card'],
-            datasets: [{
-                data: [cash, upi, card],
-                backgroundColor: [success, primary, warning],
-                borderWidth: 0
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
-
     // Custom Time Filtering for Analytics
     const timeFilter = document.getElementById('analytics-time-filter') ? document.getElementById('analytics-time-filter').value : 'monthly';
     const endDate = new Date(currentDateStr);
@@ -1039,7 +1011,37 @@ function renderCharts() {
         getPeriodKey = (d) => `${d.getFullYear()}-${d.getMonth()}`;
     }
 
+    // Payment Methods Pie Chart (Filtered by Analytics Range)
+    let cash = 0, upi = 0, card = 0;
+    _cachedPayments.forEach(data => {
+        const d = data.createdat ? new Date(data.createdat) : null;
+        if (d && d >= startDate && d <= endDate) {
+            const method = data.method;
+            if(method === 'Cash') cash++;
+            else if(method === 'UPI') upi++;
+            else if(method === 'Card') card++;
+        }
+    });
+
+    const pmCanvas = document.getElementById('paymentMethodChart');
+    if(pmCanvas) {
+        if(charts.pm) charts.pm.destroy();
+        charts.pm = new Chart(pmCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cash', 'UPI', 'Card'],
+                datasets: [{
+                    data: [cash, upi, card],
+                    backgroundColor: [success, primary, warning],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
     const periods = [];
+
     const incomeDataMap = {};
     const trafficDataMap = {};
     
@@ -1073,35 +1075,32 @@ function renderCharts() {
     let conf = 0, pending = 0, rej = 0;
 
     _cachedPayments.forEach(data => {
-        if(data.createdat) {
-            const d = new Date(data.createdat);
-            if(d >= startDate && d <= endDate) {
-                const key = getPeriodKey(d);
-                if(incomeDataMap[key] !== undefined) incomeDataMap[key] += (Number(data.amount) || 0);
-            }
+        const d = data.createdat ? new Date(data.createdat) : null;
+        if(d && d >= startDate && d <= endDate) {
+            const key = getPeriodKey(d);
+            if(incomeDataMap[key] !== undefined) incomeDataMap[key] += (Number(data.amount) || 0);
         }
     });
 
     _cachedPatients.forEach(p => {
-        if(p.createdat) {
-            const d = new Date(p.createdat);
-            if(d >= startDate && d <= endDate) {
-                const key = getPeriodKey(d);
-                if(trafficDataMap[key] !== undefined) trafficDataMap[key]++;
-            }
+        const d = p.visitdate ? new Date(p.visitdate) : (p.createdat ? new Date(p.createdat) : null);
+        if(d && d >= startDate && d <= endDate) {
+            const key = getPeriodKey(d);
+            if(trafficDataMap[key] !== undefined) trafficDataMap[key]++;
         }
     });
 
     _cachedAppts.forEach(d => {
-        if(d.createdat) {
-            const dt = new Date(d.createdat);
-            if(dt >= startDate && dt <= endDate) {
-                if(d.status === 'confirmed') conf++;
-                else if(d.status === 'pending') pending++;
-                else if(d.status === 'rejected') rej++;
-            }
+        // Use scheduled 'date' for status distribution
+        const dt = d.date ? new Date(d.date) : (d.createdat ? new Date(d.createdat) : null);
+        if(dt && dt >= startDate && dt <= endDate) {
+            if(d.status === 'confirmed') conf++;
+            else if(d.status === 'pending') pending++;
+            else if(d.status === 'rejected') rej++;
         }
     });
+
+
 
     const incomeLabels = periods.map(p => p.label);
     const incomeData = periods.map(p => incomeDataMap[p.key]);
