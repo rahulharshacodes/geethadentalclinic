@@ -5,10 +5,11 @@ const supabaseKey = "sb_publishable_yKryW-vuqCcOUx2ULTO4XA_ErDKBCCx";
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
     auth: {
+        storageKey: 'geetha-admin-session',
         storage: window.sessionStorage,
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: false
     }
 });
 
