@@ -459,7 +459,7 @@ function renderAppointmentsUI() {
     
     // Flow Donut Logic
     if (ui.flowStatusText) {
-        ui.flowStatusText.textContent = `${queueTotal} Total Appts`;
+        ui.flowStatusText.textContent = `${queueTotal} Total Appointments`;
         const flowCanvas = document.getElementById('flowDonutChart');
         if (flowCanvas) {
             if (charts.flow) charts.flow.destroy();
