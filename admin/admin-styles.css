@@ -44,20 +44,17 @@ body {
 }
 
 .auth-card {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.4);
-    padding: 56px 48px;
-    border-radius: 32px;
+    padding: 48px 40px;
+    border-radius: 24px;
     width: 100%;
     max-width: 440px;
-    box-shadow: 
-        0 25px 50px -12px rgba(0, 0, 0, 0.08),
-        0 0 0 1px rgba(255, 255, 255, 0.4) inset;
-    animation: zoomIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0,0,0,0.02);
+    animation: fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 
 .auth-header {
     text-align: center;
@@ -680,18 +677,7 @@ tr:hover td {
     to { transform: scale(1); opacity: 1; }
 }
 
-.syncing {
-    animation: sync-pulse 1.5s infinite;
-}
-
-@keyframes sync-pulse {
-    0% { background-color: white; border-color: var(--border); }
-    50% { background-color: var(--primary-light); border-color: var(--primary); }
-    100% { background-color: white; border-color: var(--border); }
-}
-
 .error-msg {
-
     color: var(--danger);
     font-size: 0.875rem;
     margin-top: 12px;
@@ -729,55 +715,9 @@ tr:hover td {
     color: white;
 }
 
-/* ─── Mobile Sidebar Controls ─── */
-.sidebar-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(15, 23, 42, 0.5);
-    backdrop-filter: blur(4px);
-    z-index: 90;
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
-.mobile-toggle {
-    display: none;
-    background: white;
-    border: 1px solid var(--border);
-    color: var(--text-main);
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius);
-    align-items: center;
-    justify-content: center;
-    font-size: 1.2rem;
-    cursor: pointer;
-    box-shadow: var(--shadow-sm);
-}
-
+/* ─── Mobile Adjustments ─── */
 @media (max-width: 1024px) {
-    .sidebar { 
-        transform: translateX(-100%); 
-        box-shadow: 20px 0 50px rgba(0,0,0,0.1);
-    }
-    .sidebar.active {
-        transform: translateX(0);
-    }
+    .sidebar { transform: translateX(-100%); }
     .main-content { margin-left: 0; }
     .chart-row { grid-template-columns: 1fr; }
-    .mobile-toggle { display: flex; }
-    .sidebar-overlay.active { display: block; }
 }
-
-.no-data-state {
-    padding: 40px;
-    text-align: center;
-    color: var(--text-muted);
-}
-.no-data-state i {
-    font-size: 3rem;
-    display: block;
-    margin-bottom: 12px;
-    opacity: 0.2;
-}
-
