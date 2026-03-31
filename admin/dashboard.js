@@ -810,15 +810,14 @@ ui.treatmentForm.addEventListener('submit', async (e) => {
         ui.treatmentForm.reset();
         ui.treatmentForm.style.display = 'none';
         
-        // Refresh the patient's view
+        // Refresh the patient's view immediately with fresh data
+        await fetchTreatments();
         const currentPatientId = ui.tPatientId.value;
         const currentPatientName = ui.tPatientName.textContent.replace('Treating: ', '');
-        setTimeout(() => {
-            if (window.selectPatientForTreatment) {
-                window.selectPatientForTreatment(currentPatientId, currentPatientName, null);
-            }
-        }, 500);
         
+        if (window.selectPatientForTreatment) {
+            window.selectPatientForTreatment(currentPatientId, currentPatientName, null);
+        }
     } catch(err) {
         showToast('Error saving treatment data', 'error');
         console.error(err);
