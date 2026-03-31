@@ -39,7 +39,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--bg-main);
     background-image: url('../logbg.jpg');
     background-size: cover;
     background-position: center;
