@@ -785,6 +785,10 @@ document.getElementById('add-patient-form').addEventListener('submit', async (e)
             }]);
         if (apptError) throw apptError;
 
+        // Explicitly refresh both caches so the patient shows immediately
+        // in the Patients Database tab and the Treatments sidebar
+        await Promise.all([fetchPatients(), fetchAppointments()]);
+
         showToast('Walk-in patient registered and marked present', 'success');
         ui.modalContainer.style.display = 'none';
         e.target.reset();
