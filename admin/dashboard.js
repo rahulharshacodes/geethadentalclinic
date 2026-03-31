@@ -753,7 +753,8 @@ document.getElementById('add-payment-form').addEventListener('submit', async (e)
         ui.modalContainer.style.display = 'none';
         e.target.reset();
     } catch(err) {
-        showToast('Error recording payment', 'error');
+        showToast(err.message || 'Error recording payment', 'error');
+        console.error('Payment Error:', err);
     }
 });
 
@@ -819,8 +820,8 @@ ui.treatmentForm.addEventListener('submit', async (e) => {
             window.selectPatientForTreatment(currentPatientId, currentPatientName, null);
         }
     } catch(err) {
-        showToast('Error saving treatment data', 'error');
-        console.error(err);
+        showToast(err.message || 'Error saving treatment data', 'error');
+        console.error('Treatment Error:', err);
     }
 });
 
@@ -840,7 +841,8 @@ if (ui.editNoteForm) {
             ui.modalContainer.style.display = 'none';
             ui.editNoteForm.reset();
         } catch(err) {
-            showToast('Error updating note', 'error');
+            showToast(err.message || 'Error updating note', 'error');
+            console.error('Note Error:', err);
         }
     });
 }
