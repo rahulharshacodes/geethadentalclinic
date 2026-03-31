@@ -1003,3 +1003,23 @@ ul { list-style: none; }
     cursor: not-allowed;
     transform: none !important;
 }
+
+#patTime option:disabled {
+    color: #94a3b8;
+    background-color: #f1f5f9;
+}
+
+#slot-status-summary {
+    grid-column: span 2;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: -10px;
+    background: #f1f5f9;
+    padding: 8px;
+    border-radius: 50px;
+    transition: var(--transition);
+    opacity: 0.9;
+    font-weight: 500;
+}
+

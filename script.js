@@ -310,6 +310,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ─── Block confirmed time slots ───
     const patTimeSelect = document.getElementById('patTime');
+    const slotStatus = document.getElementById('slot-status-summary');
 
     // Helper to parse "10:30 AM" to minutes from midnight
     function parseTimeToMinutes(timeStr) {
@@ -329,6 +330,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const isToday = selectedDate === todayStr;
         const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
+        let blockedCount = 0;
+
         // Reset all options and block past times if today
         Array.from(patTimeSelect.options).forEach(opt => {
             if (!opt.value) return;
@@ -340,6 +343,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (slotMinutes < currentMinutes + 1) { // Block if time passed
                     opt.disabled = true;
                     opt.textContent = opt.value + ' — Passed';
+                    blockedCount++;
                 }
             }
         });
@@ -351,19 +355,30 @@ document.addEventListener('DOMContentLoaded', () => {
             .eq('date', selectedDate)
             .eq('status', 'confirmed');
 
-        if (error) {
-            console.warn('[Slot Check] Error:', error);
-            return;
+        if (!error && data) {
+            const bookedTimes = new Set(data.map(a => a.time));
+            Array.from(patTimeSelect.options).forEach(opt => {
+                if (opt.value && bookedTimes.has(opt.value)) {
+                    opt.disabled = true;
+                    opt.textContent = opt.value + ' — Booked';
+                    blockedCount++;
+                }
+            });
         }
 
-        const bookedTimes = new Set((data || []).map(a => a.time));
-
-        Array.from(patTimeSelect.options).forEach(opt => {
-            if (opt.value && bookedTimes.has(opt.value)) {
-                opt.disabled = true;
-                opt.textContent = opt.value + ' — Booked';
+        // Update Slot Status Summary (Colors and Text)
+        if (slotStatus) {
+            slotStatus.style.display = 'block';
+            if (blockedCount > 0) {
+                slotStatus.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${blockedCount} slots unavailable for this date.`;
+                slotStatus.style.color = '#ef4444'; // Red for blocked
+                slotStatus.style.background = '#fef2f2';
+            } else {
+                slotStatus.innerHTML = `<i class="fa-solid fa-circle-check"></i> All slots available!`;
+                slotStatus.style.color = '#10b981'; // Green for available
+                slotStatus.style.background = '#f0fdf4';
             }
-        });
+        }
 
         // If currently selected slot is now disabled, reset selection
         if (patTimeSelect.value) {
