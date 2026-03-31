@@ -88,7 +88,12 @@ const ui = {
     tPatientId: document.getElementById('treatment-patient-id'),
     tDetails: document.getElementById('treatment-details'),
     tMeds: document.getElementById('treatment-meds'),
-    tNotes: document.getElementById('treatment-notes')
+    tNotes: document.getElementById('treatment-notes'),
+    
+    // Mobile Controls
+    sidebar: document.getElementById('sidebar'),
+    mobileToggle: document.getElementById('mobile-toggle'),
+    sidebarOverlay: document.getElementById('sidebar-overlay')
 };
 
 // Initialize Date Control
@@ -127,8 +132,29 @@ function clearListeners() {
     activeChannels = [];
 }
 
+// ─── Mobile Sidebar Toggle Logic ───
+const mobileToggle = document.getElementById('mobile-toggle');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+
+if (mobileToggle && sidebar && sidebarOverlay) {
+    const toggleSidebar = () => {
+        sidebar.classList.toggle('active');
+        sidebarOverlay.classList.toggle('active');
+    };
+    mobileToggle.addEventListener('click', toggleSidebar);
+    sidebarOverlay.addEventListener('click', toggleSidebar);
+    ui.navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    });
+}
+
 // ─── INIT ───
 let isAppInitialized = false;
+
 
 supabase.auth.onAuthStateChange((event, session) => {
     if (session?.user) {
@@ -180,41 +206,64 @@ function switchSection(targetId) {
 
 // ─── REAL-TIME LISTENERS & FETCHING ───
 
+function setSyncing(isSyncing) {
+    const btn = document.getElementById('date-label-btn');
+    if (!btn) return;
+    if (isSyncing) btn.classList.add('syncing');
+    else setTimeout(() => btn.classList.remove('syncing'), 1000);
+}
+
 async function fetchAppointments() {
-    const { data, error } = await supabase
-        .from('appointments')
-        .select('*')
-        .order('createdat', { ascending: false });
-    if (error) console.error('Error fetching appointments:', error);
-    else {
-        _cachedAppts = data;
+    setSyncing(true);
+    try {
+
+        const { data, error } = await supabase
+            .from('appointments')
+            .select('*')
+            .order('createdat', { ascending: false });
+        if (error) throw error;
         renderAppointmentsUI();
+    } catch (err) {
+        console.error('Error fetching appointments:', err);
+        showToast('Failed to fetch appointments', 'error');
+    } finally {
+        setSyncing(false);
     }
 }
+
+
 
 async function fetchPatients() {
-    const { data, error } = await supabase
-        .from('patients')
-        .select('*')
-        .order('createdat', { ascending: false });
-    if (error) console.error('Error fetching patients:', error);
-    else {
+    try {
+        const { data, error } = await supabase
+            .from('patients')
+            .select('*')
+            .order('createdat', { ascending: false });
+        if (error) throw error;
         _cachedPatients = data;
         renderPatientsUI();
+    } catch (err) {
+        console.error('Error fetching patients:', err);
+        showToast('Failed to fetch patients', 'error');
     }
 }
 
+
 async function fetchPayments() {
-    const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .order('createdat', { ascending: false });
-    if (error) console.error('Error fetching payments:', error);
-    else {
+    try {
+        const { data, error } = await supabase
+            .from('payments')
+            .select('*')
+            .order('createdat', { ascending: false });
+        if (error) throw error;
         _cachedPayments = data;
         renderPaymentsUI();
+    } catch (err) {
+        console.error('Error fetching payments:', err);
+        showToast('Failed to fetch payments', 'error');
     }
 }
+
 
 async function fetchTreatments() {
     const { data, error } = await supabase
@@ -299,13 +348,18 @@ function renderPatientsUI() {
         }
     });
 
-    ui.patientsTable.innerHTML = patHtml || '<tr><td colspan="5">No patients found.</td></tr>';
-    ui.statPatientsPresent.textContent = presentCount;
+    if (patHtml === '') {
+        ui.patientsTable.innerHTML = `<tr><td colspan="5"><div class="no-data-state"><i class="fa-solid fa-user-slash"></i>No patients found matching your search.</div></td></tr>`;
+    } else {
+        ui.patientsTable.innerHTML = patHtml;
+    }
     
-    ui.treatmentList.innerHTML = activeTreatmentsHtml || '<div style="padding:16px;color:#64748b;text-align:center;">No patients present today.</div>';
+    ui.statPatientsPresent.textContent = presentCount;
+    ui.treatmentList.innerHTML = activeTreatmentsHtml || '<div class="no-data-state"><i class="fa-solid fa-user-clock"></i>No patients present today.</div>';
     const pSelect = document.getElementById('payment-patient-id');
     if(pSelect) pSelect.innerHTML = paymentOptionsHtml;
 }
+
 
 function renderPaymentsUI() {
     let payHtml = '';
@@ -348,9 +402,15 @@ function renderPaymentsUI() {
         }
     });
 
-    ui.paymentsTable.innerHTML = payHtml || '<tr><td colspan="4">No payments found for this date.</td></tr>';
+    if (payHtml === '') {
+        ui.paymentsTable.innerHTML = `<tr><td colspan="4"><div class="no-data-state"><i class="fa-solid fa-receipt"></i>No payments found for this date.</div></td></tr>`;
+    } else {
+        ui.paymentsTable.innerHTML = payHtml;
+    }
+    
     ui.statTotalRev.textContent = `₹${totalRev.toLocaleString('en-IN')}`;
     ui.statMonthlyInc.textContent = `₹${monthRev.toLocaleString('en-IN')}`;
+
     
     // Always sync the charts when payments UI updates
     renderCharts();
@@ -451,8 +511,17 @@ function renderAppointmentsUI() {
         }
     });
 
-    ui.appointmentsTable.innerHTML = htmlAll || '<tr><td colspan="6" style="text-align:center;">No appointments found here.</td></tr>';
-    ui.overviewQueue.innerHTML = htmlToday || '<tr><td colspan="4" style="text-align:center;">No confirmed appointments for this date.</td></tr>';
+    if (htmlAll === '') {
+        ui.appointmentsTable.innerHTML = `<tr><td colspan="6"><div class="no-data-state"><i class="fa-regular fa-calendar-xmark"></i>No appointments found for this period.</div></td></tr>`;
+    } else {
+        ui.appointmentsTable.innerHTML = htmlAll;
+    }
+
+    if (htmlToday === '') {
+        ui.overviewQueue.innerHTML = `<tr><td colspan="4"><div class="no-data-state"><i class="fa-solid fa-hourglass-empty"></i>No confirmed appointments for this date.</div></td></tr>`;
+    } else {
+        ui.overviewQueue.innerHTML = htmlToday;
+    }
     
     ui.statTodayAppts.textContent = todayCount;
     if (ui.statAbsent) ui.statAbsent.textContent = absentCount;
