@@ -398,10 +398,10 @@ function renderAppointmentsUI() {
                         <td>
                             <div style="display:flex; align-items:center;">
                                 ${data.status === 'pending' ? `
-                                    <button class="btn btn-sm btn-success" onclick="updateApptStatus('${id}', 'confirmed')">Confirm</button>
-                                    <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="updateApptStatus('${id}', 'rejected')">Reject</button>
+                                    <button class="btn btn-sm btn-success" onclick="updateApptStatus('${id}', 'confirmed', this)">Confirm</button>
+                                    <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="updateApptStatus('${id}', 'rejected', this)">Reject</button>
                                 ` : `
-                                    <button class="btn btn-sm" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 8px; font-size:0.8rem;" onclick="updateApptStatus('${id}', 'pending')"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+                                    <button class="btn btn-sm" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 8px; font-size:0.8rem;" onclick="updateApptStatus('${id}', 'pending', this)"><i class="fa-solid fa-rotate-left"></i> Undo</button>
                                 `}
                                 <button class="btn btn-sm" style="margin-left:12px; border-radius:50%; width:32px; height:32px; padding:0; background:#f1f5f9; color:#475569;" onclick="viewProblem('${problemEnc}')" title="View Problem">
                                     <i class="fa-solid fa-file-waveform"></i>
@@ -433,8 +433,8 @@ function renderAppointmentsUI() {
                     <td>
                         <div style="display:flex; align-items:center;">
                             ${(!isPresent && !isAbsent) ? `
-                                <button class="btn btn-sm btn-primary" onclick="markAttendance('${id}', 'present', '${data.name}', '${data.phone}')">Present</button>
-                                <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="markAttendance('${id}', 'absent')">Absent</button>
+                                <button class="btn btn-sm btn-primary" id="att-btn-present-${id}" onclick="this.disabled=true;document.getElementById('att-btn-absent-${id}').disabled=true;markAttendance('${id}', 'present', '${data.name}', '${data.phone}')">Present</button>
+                                <button class="btn btn-sm btn-danger" id="att-btn-absent-${id}" style="margin-left:8px;" onclick="this.disabled=true;document.getElementById('att-btn-present-${id}').disabled=true;markAttendance('${id}', 'absent')">Absent</button>
                                 ${data.time === 'Walk-in' ? `<button class="btn btn-sm" style="margin-left:8px; background:#fef2f2; color:#ef4444; border:1px solid #fca5a5; padding:4px 8px; font-size:0.8rem;" onclick="deleteWalkIn('${id}', '${data.name}')" title="Delete Walk-in"><i class="fa-solid fa-trash"></i></button>` : ''}
                             ` : `
                                 <span class="status-pill ${isPresent ? 'status-confirmed' : 'status-rejected'}">${(data.attendance || '').toUpperCase()}</span>
@@ -489,7 +489,8 @@ function renderAppointmentsUI() {
 }
 
 // ─── GLOBAL WINDOW ACTIONS ───
-window.updateApptStatus = async (id, status) => {
+window.updateApptStatus = async (id, status, btnEl) => {
+    if (btnEl) btnEl.disabled = true;
     try {
         const { error } = await supabase
             .from('appointments')
@@ -499,6 +500,7 @@ window.updateApptStatus = async (id, status) => {
         showToast(`Appointment marked as ${status}`, status === 'confirmed' ? 'success' : 'error');
     } catch (e) {
         showToast('Error updating status', 'error');
+        if (btnEl) btnEl.disabled = false;
     }
 }
 
@@ -632,7 +634,10 @@ window.selectPatientForTreatment = (id, name, ev) => {
                             <p style="color: var(--text-muted); font-size: 0.95rem;"><strong>Notes:</strong> ${t.notes || 'No additional notes'}</p>
                         </div>
                     </div>
-                    <button class="btn btn-sm btn-secondary" style="flex-shrink:0;" onclick="editPastTreatment('${t.id}', '${detEsc}', '${medEsc}', '${notesEsc}')"><i class="fa-solid fa-pencil"></i> Edit</button>
+                    <div style="display:flex; gap:8px; flex-shrink:0;">
+                        <button class="btn btn-sm btn-secondary" onclick="editPastTreatment('${t.id}', '${detEsc}', '${medEsc}', '${notesEsc}')"><i class="fa-solid fa-pencil"></i> Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTreatment('${t.id}')"><i class="fa-solid fa-trash"></i> Delete</button>
+                    </div>
                 </div>
             `;
         });
@@ -748,6 +753,8 @@ ui.closeBtns.forEach(btn => btn.addEventListener('click', () => {
 // Form Submissions
 document.getElementById('add-patient-form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
     try {
         const name = document.getElementById('new-pat-name').value.trim();
         const phone = document.getElementById('new-pat-phone').value.trim();
@@ -784,6 +791,9 @@ document.getElementById('add-patient-form').addEventListener('submit', async (e)
     } catch(err) {
         showToast('Error registering patient', 'error');
         console.error(err);
+        if (submitBtn) submitBtn.disabled = false;
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
     }
 });
 
@@ -793,6 +803,8 @@ document.getElementById('add-payment-form').addEventListener('submit', async (e)
     if(!patVal) return showToast('Please select a patient', 'error');
     
     const [patId, patName] = patVal.split('|');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
 
     try {
         const { error } = await supabase
@@ -810,6 +822,9 @@ document.getElementById('add-payment-form').addEventListener('submit', async (e)
     } catch(err) {
         showToast(err.message || 'Error recording payment', 'error');
         console.error('Payment Error:', err);
+        if (submitBtn) submitBtn.disabled = false;
+    } finally {
+        if (submitBtn) submitBtn.disabled = false;
     }
 });
 
@@ -833,6 +848,8 @@ if(ui.cancelTreatmentBtn) {
 ui.treatmentForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const tId = ui.tRecordId.value;
+    const submitBtn = ui.treatmentForm.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
     
     try {
         if (tId) {
@@ -877,14 +894,46 @@ ui.treatmentForm.addEventListener('submit', async (e) => {
     } catch(err) {
         showToast(err.message || 'Error saving treatment data', 'error');
         console.error('Treatment Error:', err);
+        if (submitBtn) submitBtn.disabled = false;
     }
 });
+
+window.deleteTreatment = (tId) => {
+    ui.confirmMessage.innerHTML = `Are you sure you want to <strong>permanently delete</strong> this treatment record? This cannot be undone.`;
+    ui.modalContainer.style.display = 'flex';
+    document.querySelectorAll('.modal-card').forEach(m => m.style.display = 'none');
+    ui.modalConfirm.style.display = 'block';
+
+    ui.confirmOkBtn.onclick = async () => {
+        ui.modalContainer.style.display = 'none';
+        try {
+            const { error } = await supabase.from('treatments').delete().eq('id', tId);
+            if (error) throw error;
+            showToast('Treatment record deleted', 'success');
+            await fetchTreatments();
+            const currentPatientId = ui.tPatientId.value;
+            const currentPatientName = ui.tPatientName.textContent.replace('Treating: ', '');
+            if (currentPatientId) {
+                window.selectPatientForTreatment(currentPatientId, currentPatientName, null);
+            }
+        } catch(err) {
+            showToast('Error deleting treatment record', 'error');
+            console.error(err);
+        }
+    };
+
+    ui.confirmCancelBtn.onclick = () => {
+        ui.modalContainer.style.display = 'none';
+    };
+};
 
 if (ui.editNoteForm) {
     ui.editNoteForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const id = ui.editNoteId.value;
         const newNotes = ui.editNoteText.value.trim();
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
         
         try {
             const { error } = await supabase
@@ -902,6 +951,9 @@ if (ui.editNoteForm) {
         } catch(err) {
             showToast(err.message || 'Error updating note', 'error');
             console.error('Note Error:', err);
+            if (submitBtn) submitBtn.disabled = false;
+        } finally {
+            if (submitBtn) submitBtn.disabled = false;
         }
     });
 }
