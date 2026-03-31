@@ -535,6 +535,19 @@
                 </div>
             </form>
         </div>
+        <!-- Confirm Delete Modal -->
+        <div id="modal-confirm" class="modal-card" style="display:none; max-width: 400px; text-align: center;">
+            <div class="modal-header" style="justify-content: center;">
+                <h3 style="color: var(--danger-color);">Confirm Deletion</h3>
+            </div>
+            <div class="modal-body" style="padding: 24px;">
+                <p id="confirm-message" style="margin-bottom: 24px; font-size: 1.05rem; color: var(--text-main);"></p>
+                <div style="display: flex; gap: 12px; justify-content: center;">
+                    <button id="confirm-cancel-btn" class="btn btn-secondary close-modal" style="width: auto; padding: 10px 24px;">Cancel</button>
+                    <button id="confirm-ok-btn" class="btn btn-danger" style="width: auto; padding: 10px 24px;">Delete</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="toast" class="toast"></div>

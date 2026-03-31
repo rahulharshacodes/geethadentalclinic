@@ -46,6 +46,11 @@ const ui = {
     editNoteId: document.getElementById('edit-note-id'),
     editNoteText: document.getElementById('edit-note-text'),
 
+    modalConfirm: document.getElementById('modal-confirm'),
+    confirmMessage: document.getElementById('confirm-message'),
+    confirmOkBtn: document.getElementById('confirm-ok-btn'),
+    confirmCancelBtn: document.getElementById('confirm-cancel-btn'),
+
     viewPatTreatments: document.getElementById('view-pat-treatments'),
     viewPatPayments: document.getElementById('view-pat-payments'),
 
@@ -115,16 +120,22 @@ function clearListeners() {
 }
 
 // ─── INIT ───
-document.addEventListener('auth-success', () => {
-    initDateControl();
-    initGlobalListeners();
-    switchSection('overview');
-});
+let isAppInitialized = false;
 
-document.addEventListener('auth-logout', () => {
-    clearListeners();
-    // Default back to first section visually
-    ui.sections.forEach(s => s.classList.remove('active'));
+supabase.auth.onAuthStateChange((event, session) => {
+    if (session?.user) {
+        if (!isAppInitialized) {
+            isAppInitialized = true;
+            initDateControl();
+            initGlobalListeners();
+            switchSection('overview');
+        }
+    } else {
+        isAppInitialized = false;
+        clearListeners();
+        // Default back to first section visually
+        ui.sections.forEach(s => s.classList.remove('active'));
+    }
 });
 
 // ─── NAVIGATION ───
@@ -495,8 +506,30 @@ window.markAttendance = async (apptId, status, name, phone) => {
     }
 }
 
-window.deleteWalkIn = async (apptId, patName) => {
-    if (!confirm(`Are you sure you want to completely delete the walk-in record for ${patName}?`)) return;
+window.deleteWalkIn = (apptId, patName) => {
+    if (!ui.modalConfirm) {
+        // Fallback if HTML not updated
+        if (!confirm(`Are you sure you want to completely delete the walk-in record for ${patName}?`)) return;
+        executeDeleteWalkIn(apptId, patName);
+        return;
+    }
+
+    ui.confirmMessage.innerHTML = `Are you sure you want to completely delete the walk-in record for <strong>${patName}</strong>?`;
+    ui.modalContainer.style.display = 'flex';
+    document.querySelectorAll('.modal-card').forEach(m => m.style.display = 'none');
+    ui.modalConfirm.style.display = 'block';
+
+    ui.confirmOkBtn.onclick = () => {
+        ui.modalContainer.style.display = 'none';
+        executeDeleteWalkIn(apptId, patName);
+    };
+    
+    ui.confirmCancelBtn.onclick = () => {
+        ui.modalContainer.style.display = 'none';
+    };
+};
+
+async function executeDeleteWalkIn(apptId, patName) {
     try {
         const { error: apptErr } = await supabase.from('appointments').delete().eq('id', apptId);
         if (apptErr) throw apptErr;
