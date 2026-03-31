@@ -311,35 +311,52 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── Block confirmed time slots ───
     const patTimeSelect = document.getElementById('patTime');
 
+    // Helper to parse "10:30 AM" to minutes from midnight
+    function parseTimeToMinutes(timeStr) {
+        if (!timeStr) return 0;
+        const [time, period] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        if (period === 'PM' && hours < 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+    }
+
     async function updateBookedSlots(selectedDate) {
         if (!selectedDate || !patTimeSelect) return;
 
-        // Reset all options first
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+        const isToday = selectedDate === todayStr;
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+        // Reset all options and block past times if today
         Array.from(patTimeSelect.options).forEach(opt => {
+            if (!opt.value) return;
             opt.disabled = false;
-            opt.textContent = opt.textContent.replace(' — Booked', '');
+            opt.textContent = opt.value; // Reset text
+
+            if (isToday) {
+                const slotMinutes = parseTimeToMinutes(opt.value);
+                if (slotMinutes < currentMinutes + 1) { // Block if time passed
+                    opt.disabled = true;
+                    opt.textContent = opt.value + ' — Passed';
+                }
+            }
         });
 
-        // Fetch confirmed appointments for the selected date
+        // Fetch confirmed appointments from Supabase
         const { data, error } = await supabase
             .from('appointments')
             .select('time, status, date')
             .eq('date', selectedDate)
             .eq('status', 'confirmed');
 
-        console.log('[Slot Check] Date:', selectedDate, '| Data:', data, '| Error:', error);
-
         if (error) {
-            console.warn('[Slot Check] Supabase RLS may be blocking public reads. Grant SELECT on appointments for anon role in Supabase dashboard.');
-            return;
-        }
-        if (!data || data.length === 0) {
-            console.log('[Slot Check] No confirmed appointments found for this date.');
+            console.warn('[Slot Check] Error:', error);
             return;
         }
 
-        const bookedTimes = new Set(data.map(a => a.time));
-        console.log('[Slot Check] Booked times:', [...bookedTimes]);
+        const bookedTimes = new Set((data || []).map(a => a.time));
 
         Array.from(patTimeSelect.options).forEach(opt => {
             if (opt.value && bookedTimes.has(opt.value)) {
@@ -348,9 +365,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // If the currently selected slot is now booked, reset the selection
-        if (patTimeSelect.value && bookedTimes.has(patTimeSelect.value)) {
-            patTimeSelect.value = '';
+        // If currently selected slot is now disabled, reset selection
+        if (patTimeSelect.value) {
+            const selectedOpt = Array.from(patTimeSelect.options).find(o => o.value === patTimeSelect.value);
+            if (selectedOpt && selectedOpt.disabled) {
+                patTimeSelect.value = '';
+            }
         }
     }
 
