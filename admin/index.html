@@ -451,6 +451,43 @@
                 <button class="btn btn-secondary close-modal" style="width: auto;">Close</button>
             </div>
         </div>
+
+        <!-- View Patient Modal -->
+        <div id="modal-view-patient" class="modal-card" style="display:none; max-width: 500px;">
+             <div class="modal-header">
+                <h3>Patient Details</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 24px; font-size: 1.05rem; line-height: 1.6;">
+                <div style="display: grid; grid-template-columns: 120px 1fr; gap: 12px; margin-bottom: 16px; color: var(--text-main);">
+                    <strong style="color: var(--text-muted);">Name:</strong> <span id="view-pat-name" style="font-weight: 500;"></span>
+                    <strong style="color: var(--text-muted);">Phone:</strong> <span id="view-pat-phone" style="font-weight: 500;"></span>
+                    <strong style="color: var(--text-muted);">Last Visit:</strong> <span id="view-pat-visit" style="font-weight: 500;"></span>
+                    <strong style="color: var(--text-muted);">Notes:</strong> <span id="view-pat-notes" style="font-weight: 500;"></span>
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 16px; border-top: 1px solid var(--border-color); text-align: right;">
+                <button class="btn btn-secondary close-modal" style="width: auto;">Close</button>
+            </div>
+        </div>
+
+        <!-- Edit Note Modal -->
+        <div id="modal-edit-note" class="modal-card" style="display:none; max-width: 400px;">
+            <div class="modal-header">
+                <h3>Edit Note</h3>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="edit-note-form">
+                <input type="hidden" id="edit-note-id">
+                <div class="modal-body" style="padding: 24px;">
+                    <textarea id="edit-note-text" rows="4" style="width: 100%; border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; font-family: inherit; font-size: 0.95rem; outline: none; resize: vertical;" placeholder="Enter patient notes here..." required></textarea>
+                </div>
+                <div class="modal-footer" style="padding: 16px; border-top: 1px solid var(--border-color); text-align: right; display: flex; justify-content: flex-end; gap: 12px;">
+                    <button type="button" class="btn btn-secondary close-modal" style="width: auto;">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="width: auto;">Save Note</button>
+                </div>
+            </form>
+        </div>
     </div>
 
     <div id="toast" class="toast"></div>

@@ -33,6 +33,18 @@ const ui = {
     modalContainer: document.getElementById('modal-container'),
     modalAddPatient: document.getElementById('modal-add-patient'),
     modalAddPayment: document.getElementById('modal-add-payment'),
+    
+    modalViewPatient: document.getElementById('modal-view-patient'),
+    viewPatName: document.getElementById('view-pat-name'),
+    viewPatPhone: document.getElementById('view-pat-phone'),
+    viewPatVisit: document.getElementById('view-pat-visit'),
+    viewPatNotes: document.getElementById('view-pat-notes'),
+    
+    modalEditNote: document.getElementById('modal-edit-note'),
+    editNoteForm: document.getElementById('edit-note-form'),
+    editNoteId: document.getElementById('edit-note-id'),
+    editNoteText: document.getElementById('edit-note-text'),
+
     closeBtns: document.querySelectorAll('.close-modal'),
 
     // Tables
@@ -208,14 +220,24 @@ function renderPatientsUI() {
     _cachedPatients.forEach(data => {
         const id = data.id;
         const visitDateObj = data.createdat ? new Date(data.createdat).toLocaleDateString() : 'Walk-in';
+        const notesEnc = encodeURIComponent(data.notes || '').replace(/'/g, "%27");
+        const safeName = (data.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        const safePhone = (data.phone || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
         
         patHtml += `
             <tr>
                 <td><strong>${data.name}</strong></td>
                 <td>${data.phone}</td>
                 <td>${visitDateObj}</td>
-                <td>${data.notes || '-'}</td>
-                <td><button class="btn btn-sm btn-primary" onclick="alert('View details for ${data.name}')">View</button></td>
+                <td>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap: 8px;">
+                        <span>${data.notes || '-'}</span>
+                        <button class="btn btn-sm" style="border-radius:50%; width:28px; height:28px; padding:0; background:#f1f5f9; color:#475569; border:none; cursor:pointer; flex-shrink: 0;" onclick="editPatientNote('${id}', '${notesEnc}')" title="Edit Note">
+                            <i class="fa-solid fa-pencil" style="pointer-events:none;"></i>
+                        </button>
+                    </div>
+                </td>
+                <td><button class="btn btn-sm btn-primary" onclick="viewPatient('${safeName}', '${safePhone}', '${visitDateObj}', '${notesEnc}')">View</button></td>
             </tr>
         `;
 
@@ -468,10 +490,29 @@ window.viewProblem = (problemEnc) => {
     if (pText && problemModal) {
         pText.textContent = decodeURIComponent(problemEnc);
         ui.modalContainer.style.display = 'flex';
+        document.querySelectorAll('.modal-card').forEach(m => m.style.display = 'none');
         problemModal.style.display = 'block';
-        if (ui.modalAddPatient) ui.modalAddPatient.style.display = 'none';
-        if (ui.modalAddPayment) ui.modalAddPayment.style.display = 'none';
     }
+}
+
+window.viewPatient = (name, phone, visit, notesEnc) => {
+    ui.viewPatName.textContent = name;
+    ui.viewPatPhone.textContent = phone;
+    ui.viewPatVisit.textContent = visit;
+    ui.viewPatNotes.textContent = decodeURIComponent(notesEnc) || '-';
+    
+    ui.modalContainer.style.display = 'flex';
+    document.querySelectorAll('.modal-card').forEach(m => m.style.display = 'none');
+    ui.modalViewPatient.style.display = 'block';
+}
+
+window.editPatientNote = (id, notesEnc) => {
+    ui.editNoteId.value = id;
+    ui.editNoteText.value = decodeURIComponent(notesEnc);
+    
+    ui.modalContainer.style.display = 'flex';
+    document.querySelectorAll('.modal-card').forEach(m => m.style.display = 'none');
+    ui.modalEditNote.style.display = 'block';
 }
 
 // ─── EVENT LISTENERS ───
@@ -488,13 +529,13 @@ if (ui.apptSearch) {
 // Modals
 document.getElementById('open-add-patient').addEventListener('click', () => {
     ui.modalContainer.style.display = 'flex';
+    document.querySelectorAll('.modal-card').forEach(m => m.style.display = 'none');
     ui.modalAddPatient.style.display = 'block';
-    ui.modalAddPayment.style.display = 'none';
 });
 
 document.getElementById('open-payment-modal').addEventListener('click', () => {
     ui.modalContainer.style.display = 'flex';
-    ui.modalAddPatient.style.display = 'none';
+    document.querySelectorAll('.modal-card').forEach(m => m.style.display = 'none');
     ui.modalAddPayment.style.display = 'block';
 });
 
@@ -571,6 +612,27 @@ ui.treatmentForm.addEventListener('submit', async (e) => {
         showToast('Error saving treatment data', 'error');
     }
 });
+
+if (ui.editNoteForm) {
+    ui.editNoteForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = ui.editNoteId.value;
+        const newNotes = ui.editNoteText.value.trim();
+        
+        try {
+            const { error } = await supabase
+                .from('patients')
+                .update({ notes: newNotes })
+                .eq('id', id);
+            if (error) throw error;
+            showToast('Note updated successfully', 'success');
+            ui.modalContainer.style.display = 'none';
+            ui.editNoteForm.reset();
+        } catch(err) {
+            showToast('Error updating note', 'error');
+        }
+    });
+}
 
 // ─── CHARTS (Analytics) ───
 let charts = {};
