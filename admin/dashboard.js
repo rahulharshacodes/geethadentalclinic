@@ -315,7 +315,7 @@ function renderPaymentsUI() {
             
             payHtml += `
                 <tr>
-                    <td><strong>${data.patientName}</strong></td>
+                    <td><strong>${data.patientname || data.patientName || 'Unknown'}</strong></td>
                     <td>₹${amount}</td>
                     <td>${data.method}</td>
                     <td>${dateObj.toLocaleDateString()}</td>
@@ -479,18 +479,34 @@ window.markAttendance = async (apptId, status, name, phone) => {
             .eq('id', apptId);
         if (attError) throw attError;
         
-        // Automatically migrate present patients to Patients Database
+        // Migrating present patients to Patients Database
         if (status === 'present') {
-            const { error: patError } = await supabase
-                .from('patients')
-                .insert([{
-                    name: name,
-                    phone: phone,
-                    visitdate: currentDateStr,
-                    notes: 'Arrived for appointment.'
-                }]);
+            const existingPat = _cachedPatients.find(p => p.name === name || p.phone === phone);
+            let patError;
+            if (existingPat) {
+                // Update existing patient's visit date
+                const { error } = await supabase
+                    .from('patients')
+                    .update({
+                        visitdate: currentDateStr,
+                        notes: 'Arrived for appointment. ' + (existingPat.notes || '')
+                    })
+                    .eq('id', existingPat.id);
+                patError = error;
+            } else {
+                // Insert new patient
+                const { error } = await supabase
+                    .from('patients')
+                    .insert([{
+                        name: name,
+                        phone: phone,
+                        visitdate: currentDateStr,
+                        notes: 'Arrived for appointment.'
+                    }]);
+                patError = error;
+            }
             if (patError) throw patError;
-            showToast('Patient marked present & added to directory', 'success');
+            showToast('Patient marked present & directory updated', 'success');
         } else if (status === 'absent') {
             showToast('Patient marked absent', 'success');
         } else if (status === null) {
@@ -559,7 +575,7 @@ window.selectPatientForTreatment = (id, name, ev) => {
     ui.tRecordId.value = '';
     
     // Render past treatments list
-    const patTreatments = _cachedTreatments.filter(t => t.patientId == id || t.patientName === name);
+    const patTreatments = _cachedTreatments.filter(t => t.patientid == id || t.patientname === name || t.patientId == id || t.patientName === name);
     if (patTreatments.length === 0) {
         ui.pastTreatmentsList.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 24px; background: white; border-radius: 8px; border: 1px dashed var(--border-color);">No prior treatments found for this patient.</p>';
         // Auto-open form if no previous treatments
@@ -614,7 +630,7 @@ window.viewPatient = (id, name, phone, visit, notesEnc) => {
     ui.viewPatNotes.textContent = decodeURIComponent(notesEnc) || '-';
     
     // Treatments
-    const patTreatments = _cachedTreatments.filter(t => t.patientId == id || t.patientName === name);
+    const patTreatments = _cachedTreatments.filter(t => t.patientid == id || t.patientname === name || t.patientId == id || t.patientName === name);
     let tHtml = '';
     if (patTreatments.length === 0) {
         tHtml = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">No treatment history found.</td></tr>';
@@ -632,7 +648,7 @@ window.viewPatient = (id, name, phone, visit, notesEnc) => {
     if (ui.viewPatTreatments) ui.viewPatTreatments.innerHTML = tHtml;
 
     // Payments
-    const patPayments = _cachedPayments.filter(p => p.patientId == id || p.patientName === name);
+    const patPayments = _cachedPayments.filter(p => p.patientid == id || p.patientname === name || p.patientId == id || p.patientName === name);
     let pHtml = '';
     if (patPayments.length === 0) {
         pHtml = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 16px;">No payment history found.</td></tr>';
@@ -743,8 +759,8 @@ document.getElementById('add-payment-form').addEventListener('submit', async (e)
         const { error } = await supabase
             .from('payments')
             .insert([{
-                patientId: patId,
-                patientName: patName,
+                patientid: patId,
+                patientname: patName,
                 amount: Number(document.getElementById('payment-amount').value),
                 method: document.getElementById('payment-method').value
             }]);
@@ -797,8 +813,8 @@ ui.treatmentForm.addEventListener('submit', async (e) => {
             const { error } = await supabase
                 .from('treatments')
                 .insert([{
-                    patientId: ui.tPatientId.value,
-                    patientName: ui.tPatientName.textContent.replace('Treating: ', ''),
+                    patientid: ui.tPatientId.value,
+                    patientname: ui.tPatientName.textContent.replace('Treating: ', ''),
                     details: ui.tDetails.value.trim(),
                     medications: ui.tMeds.value.trim(),
                     notes: ui.tNotes.value.trim(),
