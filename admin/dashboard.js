@@ -644,20 +644,41 @@ ui.closeBtns.forEach(btn => btn.addEventListener('click', () => {
 document.getElementById('add-patient-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
-        const { error } = await supabase
+        const name = document.getElementById('new-pat-name').value.trim();
+        const phone = document.getElementById('new-pat-phone').value.trim();
+        const notes = document.getElementById('new-pat-notes').value.trim();
+
+        // Register in Patients DB
+        const { error: patError } = await supabase
             .from('patients')
             .insert([{
-                name: document.getElementById('new-pat-name').value.trim(),
-                phone: document.getElementById('new-pat-phone').value.trim(),
-                notes: document.getElementById('new-pat-notes').value.trim(),
-                visitDate: currentDateStr // Marking as Walk-In implies visit today
+                name: name,
+                phone: phone,
+                notes: notes,
+                visitdate: currentDateStr
             }]);
-        if (error) throw error;
-        showToast('Patient successfully registered');
+        if (patError) throw patError;
+
+        // Register in Appointments so it shows up in "Today's Patients" Queue with all actions
+        const { error: apptError } = await supabase
+            .from('appointments')
+            .insert([{
+                name: name,
+                phone: phone,
+                problem: notes || 'Walk-in registration',
+                date: currentDateStr,
+                time: 'Walk-in',
+                status: 'confirmed',
+                attendance: 'present'
+            }]);
+        if (apptError) throw apptError;
+
+        showToast('Walk-in patient registered and marked present', 'success');
         ui.modalContainer.style.display = 'none';
         e.target.reset();
     } catch(err) {
         showToast('Error registering patient', 'error');
+        console.error(err);
     }
 });
 
