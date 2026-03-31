@@ -481,7 +481,11 @@ window.markAttendance = async (apptId, status, name, phone) => {
         
         // Migrating present patients to Patients Database
         if (status === 'present') {
-            const existingPat = _cachedPatients.find(p => p.name === name || p.phone === phone);
+            // Only merge if both Name AND Phone exactly match, OR same Name and both missing phone
+            const existingPat = _cachedPatients.find(p => 
+                (p.name === name && p.phone === phone && phone.trim() !== '') || 
+                (p.name === name && (!p.phone || p.phone.trim() === '') && (!phone || phone.trim() === ''))
+            );
             let patError;
             if (existingPat) {
                 // Update existing patient's visit date
@@ -588,10 +592,14 @@ window.selectPatientForTreatment = (id, name, ev) => {
             const medEsc = encodeURIComponent(t.medications || '');
             const notesEsc = encodeURIComponent(t.notes || '');
             hHtml += `
-                <div style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: white; display: flex; justify-content: space-between; align-items: flex-start;">
+                <div style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: white; display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
                     <div style="flex:1;">
                         <strong style="color: var(--text-main); font-size: 1.05rem;">${dateStr}</strong>
-                        <p style="margin-top: 4px; color: var(--text-muted); font-size: 0.95rem;">${t.details || 'No details provided'}</p>
+                        <div style="margin-top: 8px;">
+                            <p style="color: var(--text-main); font-size: 0.95rem; margin-bottom: 4px;"><strong>Treatment:</strong> ${t.details || 'No details provided'}</p>
+                            <p style="color: var(--text-main); font-size: 0.95rem; margin-bottom: 4px;"><strong>Medications:</strong> ${t.medications || 'None prescribed'}</p>
+                            <p style="color: var(--text-muted); font-size: 0.95rem;"><strong>Notes:</strong> ${t.notes || 'No additional notes'}</p>
+                        </div>
                     </div>
                     <button class="btn btn-sm btn-secondary" style="flex-shrink:0;" onclick="editPastTreatment('${t.id}', '${detEsc}', '${medEsc}', '${notesEsc}')"><i class="fa-solid fa-pencil"></i> Edit</button>
                 </div>
@@ -853,6 +861,10 @@ if (ui.editNoteForm) {
                 .update({ notes: newNotes })
                 .eq('id', id);
             if (error) throw error;
+            
+            // Refresh patiently to instantly update DOM
+            await fetchPatients();
+            
             showToast('Note updated successfully', 'success');
             ui.modalContainer.style.display = 'none';
             ui.editNoteForm.reset();
