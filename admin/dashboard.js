@@ -12,6 +12,15 @@ function getLocalYYYYMMDD() {
 
 let activeChannels = [];
 let currentDateStr = getLocalYYYYMMDD();
+
+// Helper to create a local Date object from YYYY-MM-DD without UTC offset issues
+function parseLocalYYYYMMDD(str) {
+    if (!str || typeof str !== 'string') return null;
+    const [y, m, d] = str.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d); // Local time constructor
+}
+
 let _cachedAppts = [];
 let _cachedPatients = [];
 let _cachedPayments = [];
@@ -976,9 +985,11 @@ function renderCharts() {
     const warning = '#f59e0b';
     const danger = '#ef4444';
 
-    // Custom Time Filtering for Analytics
-    const timeFilter = document.getElementById('analytics-time-filter') ? document.getElementById('analytics-time-filter').value : 'monthly';
-    const endDate = new Date(currentDateStr);
+    // ─── Range Calculation (Local Time) ───
+    const timeFilterSelector = document.getElementById('analytics-time-filter');
+    const timeFilter = timeFilterSelector ? timeFilterSelector.value : 'monthly';
+    const endDate = parseLocalYYYYMMDD(currentDateStr);
+    if (!endDate) return;
     endDate.setHours(23, 59, 59, 999);
     
     let startDate = new Date(endDate);
@@ -1011,40 +1022,14 @@ function renderCharts() {
         getPeriodKey = (d) => `${d.getFullYear()}-${d.getMonth()}`;
     }
 
-    // Payment Methods Pie Chart (Filtered by Analytics Range)
-    let cash = 0, upi = 0, card = 0;
-    _cachedPayments.forEach(data => {
-        const d = data.createdat ? new Date(data.createdat) : null;
-        if (d && d >= startDate && d <= endDate) {
-            const method = data.method;
-            if(method === 'Cash') cash++;
-            else if(method === 'UPI') upi++;
-            else if(method === 'Card') card++;
-        }
-    });
-
-    const pmCanvas = document.getElementById('paymentMethodChart');
-    if(pmCanvas) {
-        if(charts.pm) charts.pm.destroy();
-        charts.pm = new Chart(pmCanvas, {
-            type: 'doughnut',
-            data: {
-                labels: ['Cash', 'UPI', 'Card'],
-                datasets: [{
-                    data: [cash, upi, card],
-                    backgroundColor: [success, primary, warning],
-                    borderWidth: 0
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
-
     const periods = [];
-
     const incomeDataMap = {};
     const trafficDataMap = {};
     
+    // Distribution Counters (Pie Charts)
+    let cash = 0, upi = 0, card = 0;
+    let conf = 0, pending = 0, rej = 0;
+
     if (timeFilter === 'daily') {
         for(let i = numPeriods - 1; i >= 0; i--) {
             const d = new Date(endDate);
@@ -1071,28 +1056,32 @@ function renderCharts() {
         }
     }
 
-    // Process Analytics Data (Line/Bar Charts and Appointment Pie)
-    let conf = 0, pending = 0, rej = 0;
-
+    // Process Financials & Methodology Distribution
     _cachedPayments.forEach(data => {
-        const d = data.createdat ? new Date(data.createdat) : null;
+        const d = data.createdat ? (typeof data.createdat === 'string' && data.createdat.includes('-') ? parseLocalYYYYMMDD(data.createdat.split('T')[0]) : new Date(data.createdat)) : null;
         if(d && d >= startDate && d <= endDate) {
             const key = getPeriodKey(d);
             if(incomeDataMap[key] !== undefined) incomeDataMap[key] += (Number(data.amount) || 0);
+            
+            const method = data.method;
+            if(method === 'Cash') cash++;
+            else if(method === 'UPI') upi++;
+            else if(method === 'Card') card++;
         }
     });
 
+    // Process Traffic
     _cachedPatients.forEach(p => {
-        const d = p.visitdate ? new Date(p.visitdate) : (p.createdat ? new Date(p.createdat) : null);
+        const d = p.visitdate ? parseLocalYYYYMMDD(p.visitdate) : (p.createdat ? new Date(p.createdat) : null);
         if(d && d >= startDate && d <= endDate) {
             const key = getPeriodKey(d);
             if(trafficDataMap[key] !== undefined) trafficDataMap[key]++;
         }
     });
 
+    // Process Appointment Status Distribution
     _cachedAppts.forEach(d => {
-        // Use scheduled 'date' for status distribution
-        const dt = d.date ? new Date(d.date) : (d.createdat ? new Date(d.createdat) : null);
+        const dt = d.date ? parseLocalYYYYMMDD(d.date) : (d.createdat ? new Date(d.createdat) : null);
         if(dt && dt >= startDate && dt <= endDate) {
             if(d.status === 'confirmed') conf++;
             else if(d.status === 'pending') pending++;
@@ -1100,73 +1089,86 @@ function renderCharts() {
         }
     });
 
-
-
     const incomeLabels = periods.map(p => p.label);
     const incomeData = periods.map(p => incomeDataMap[p.key]);
-
     const trafficLabels = periods.map(p => p.label);
     const trafficData = periods.map(p => trafficDataMap[p.key]);
 
-    // Update Titles
-    if(document.getElementById('chart-title-income')) {
-        document.getElementById('chart-title-income').textContent = timeFilter === 'daily' ? 'Income Trend (Last 7 Days)' : (timeFilter === 'weekly' ? 'Income Trend (Last 8 Weeks)' : 'Income Trend (Last 12 Months)');
-    }
-    if(document.getElementById('chart-title-traffic')) {
-        document.getElementById('chart-title-traffic').textContent = timeFilter === 'daily' ? 'Patient Traffic (Last 7 Days)' : (timeFilter === 'weekly' ? 'Patient Traffic (Last 8 Weeks)' : 'Patient Traffic (Last 12 Months)');
-    }
-
     // Render Income Trend
     const incCanvas = document.getElementById('incomeTrendChart');
-    if(charts.inc) charts.inc.destroy();
-    charts.inc = new Chart(incCanvas, {
-        type: 'line',
-        data: {
-            labels: incomeLabels,
-            datasets: [{
-                label: 'Income (₹)',
-                data: incomeData,
-                borderColor: primary,
-                backgroundColor: primaryLight,
-                tension: 0.4,
-                fill: true
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    if(incCanvas) {
+        if(charts.inc) charts.inc.destroy();
+        charts.inc = new Chart(incCanvas, {
+            type: 'line',
+            data: {
+                labels: incomeLabels,
+                datasets: [{
+                    label: 'Income (₹)',
+                    data: incomeData,
+                    borderColor: primary,
+                    backgroundColor: primaryLight,
+                    tension: 0.4,
+                    fill: true
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
 
-    // Render Appointment Status
+    // Render Status Distribution Chart (Pie)
     const appCanvas = document.getElementById('appointmentStatusChart');
-    if(charts.app) charts.app.destroy();
-    charts.app = new Chart(appCanvas, {
-        type: 'pie',
-        data: {
-            labels: ['Confirmed', 'Pending', 'Rejected'],
-            datasets: [{
-                data: [conf, pending, rej],
-                backgroundColor: [success, warning, danger],
-                borderWidth: 0
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false }
-    });
+    if(appCanvas) {
+        if(charts.app) charts.app.destroy();
+        charts.app = new Chart(appCanvas, {
+            type: 'pie',
+            data: {
+                labels: ['Confirmed', 'Pending', 'Rejected'],
+                datasets: [{
+                    data: [conf, pending, rej],
+                    backgroundColor: [success, warning, danger],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
 
-    // Render Daily Traffic
+    // Render Methodology Distribution Chart (Doughnut)
+    const pmCanvas = document.getElementById('paymentMethodChart');
+    if(pmCanvas) {
+        if(charts.pm) charts.pm.destroy();
+        charts.pm = new Chart(pmCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: ['Cash', 'UPI', 'Card'],
+                datasets: [{
+                    data: [cash, upi, card],
+                    backgroundColor: [success, primary, warning],
+                    borderWidth: 0
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false }
+        });
+    }
+
+    // Render Traffic Bar Chart
     const trafficCanvas = document.getElementById('dailyTrafficChart');
-    if(charts.tra) charts.tra.destroy();
-    charts.tra = new Chart(trafficCanvas, {
-        type: 'bar',
-        data: {
-            labels: trafficLabels,
-            datasets: [{
-                label: 'Patient Registrations',
-                data: trafficData,
-                backgroundColor: success,
-                borderRadius: 4
-            }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
-    });
+    if(trafficCanvas) {
+        if(charts.tra) charts.tra.destroy();
+        charts.tra = new Chart(trafficCanvas, {
+            type: 'bar',
+            data: {
+                labels: trafficLabels,
+                datasets: [{
+                    label: 'Patient Traffic',
+                    data: trafficData,
+                    backgroundColor: success,
+                    borderRadius: 4
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
+        });
+    }
 }
 
 // Attach filter listener
