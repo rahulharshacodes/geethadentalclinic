@@ -282,27 +282,41 @@
                                 <i class="fa-solid fa-tooth"></i>
                                 <p>Select a patient from the list to start treatment</p>
                             </div>
-                            <form id="treatment-form" style="display: none;">
-                                <input type="hidden" id="treatment-patient-id">
-                                <div class="editor-header">
-                                    <h3 id="treatment-patient-name">Patient Name</h3>
-                                    <button type="submit" class="btn btn-success">Save Record</button>
+                            
+                            <div id="treatment-active-container" style="display: none;">
+                                <div class="editor-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 24px;">
+                                    <h3 id="treatment-patient-name" style="font-size: 1.5rem; color: var(--text-main); font-weight: 700;">Patient Name</h3>
+                                    <button id="add-new-treatment-btn" class="btn btn-sm btn-primary"><i class="fa-solid fa-plus"></i> New Record</button>
                                 </div>
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label>Treatment Details</label>
-                                        <textarea id="treatment-details" rows="4" placeholder="Scaling, Fillings, Extraction, etc." required></textarea>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Medication / Prescription</label>
-                                        <textarea id="treatment-meds" rows="4" placeholder="Amoxicillin 500mg, Paracetamol..."></textarea>
-                                    </div>
-                                    <div class="form-group full-width">
-                                        <label>Doctor's Notes</label>
-                                        <textarea id="treatment-notes" rows="2" placeholder="Internal notes for next visit..."></textarea>
-                                    </div>
+                                
+                                <div id="past-treatments-list" style="margin-bottom: 24px;">
+                                    <!-- History cards here -->
                                 </div>
-                            </form>
+
+                                <form id="treatment-form" style="display: none; background: #f8fafc; padding: 24px; border-radius: 12px; border: 1px solid var(--border-color);">
+                                    <h4 style="margin-bottom: 16px; color: var(--primary);" id="treatment-form-title">Add New Treatment</h4>
+                                    <input type="hidden" id="treatment-id">
+                                    <input type="hidden" id="treatment-patient-id">
+                                    <div class="form-grid">
+                                        <div class="form-group">
+                                            <label>Treatment Details</label>
+                                            <textarea id="treatment-details" rows="4" placeholder="Scaling, Fillings, Extraction, etc." required></textarea>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Medication / Prescription</label>
+                                            <textarea id="treatment-meds" rows="4" placeholder="Amoxicillin 500mg, Paracetamol..."></textarea>
+                                        </div>
+                                        <div class="form-group full-width">
+                                            <label>Doctor's Notes</label>
+                                            <textarea id="treatment-notes" rows="2" placeholder="Internal notes for next visit..."></textarea>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right; margin-top: 20px; display: flex; justify-content: flex-end; gap: 12px;">
+                                        <button type="button" id="cancel-treatment-btn" class="btn btn-secondary">Cancel</button>
+                                        <button type="submit" class="btn btn-success">Save Record</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -453,17 +467,50 @@
         </div>
 
         <!-- View Patient Modal -->
-        <div id="modal-view-patient" class="modal-card" style="display:none; max-width: 500px;">
+        <div id="modal-view-patient" class="modal-card" style="display:none; max-width: 650px;">
              <div class="modal-header">
                 <h3>Patient Details</h3>
                 <button class="close-modal">&times;</button>
             </div>
-            <div class="modal-body" style="padding: 24px; font-size: 1.05rem; line-height: 1.6;">
-                <div style="display: grid; grid-template-columns: 120px 1fr; gap: 12px; margin-bottom: 16px; color: var(--text-main);">
-                    <strong style="color: var(--text-muted);">Name:</strong> <span id="view-pat-name" style="font-weight: 500;"></span>
+            <div class="modal-body" style="padding: 24px; font-size: 1.05rem; line-height: 1.6; max-height: 70vh; overflow-y: auto;">
+                <div style="display: grid; grid-template-columns: 100px 1fr; gap: 8px; margin-bottom: 24px; color: var(--text-main); background: #f8fafc; padding: 16px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <strong style="color: var(--text-muted);">Name:</strong> <span id="view-pat-name" style="font-weight: 600;"></span>
                     <strong style="color: var(--text-muted);">Phone:</strong> <span id="view-pat-phone" style="font-weight: 500;"></span>
-                    <strong style="color: var(--text-muted);">Last Visit:</strong> <span id="view-pat-visit" style="font-weight: 500;"></span>
+                    <strong style="color: var(--text-muted);">Reg Date:</strong> <span id="view-pat-visit" style="font-weight: 500;"></span>
                     <strong style="color: var(--text-muted);">Notes:</strong> <span id="view-pat-notes" style="font-weight: 500;"></span>
+                </div>
+                
+                <h4 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-main); border-bottom: 2px solid var(--border-color); padding-bottom: 8px;">Treatment History</h4>
+                <div class="table-responsive" style="margin-bottom: 24px;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                        <thead style="background: var(--bg-color);">
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color);">Date</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color);">Details</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color);">Medications</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color);">Doc Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody id="view-pat-treatments">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <h4 style="margin-bottom: 12px; font-size: 1.1rem; color: var(--text-main); border-bottom: 2px solid var(--border-color); padding-bottom: 8px;">Payment History</h4>
+                <div class="table-responsive">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.95rem;">
+                        <thead style="background: var(--bg-color);">
+                            <tr>
+                                <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color);">Date</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color);">Amount</th>
+                                <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border-color);">Method</th>
+                            </tr>
+                        </thead>
+                        <tbody id="view-pat-payments">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
             <div class="modal-footer" style="padding: 16px; border-top: 1px solid var(--border-color); text-align: right;">

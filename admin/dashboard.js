@@ -15,6 +15,7 @@ let currentDateStr = getLocalYYYYMMDD();
 let _cachedAppts = [];
 let _cachedPatients = [];
 let _cachedPayments = [];
+let _cachedTreatments = [];
 
 // DOM Elements
 const ui = {
@@ -45,6 +46,9 @@ const ui = {
     editNoteId: document.getElementById('edit-note-id'),
     editNoteText: document.getElementById('edit-note-text'),
 
+    viewPatTreatments: document.getElementById('view-pat-treatments'),
+    viewPatPayments: document.getElementById('view-pat-payments'),
+
     closeBtns: document.querySelectorAll('.close-modal'),
 
     // Tables
@@ -67,6 +71,12 @@ const ui = {
     // Treatment Form
     treatmentList: document.getElementById('active-treatment-list'),
     treatmentPlaceholder: document.getElementById('treatment-editor-placeholder'),
+    treatmentActiveContainer: document.getElementById('treatment-active-container'),
+    addNewTreatmentBtn: document.getElementById('add-new-treatment-btn'),
+    pastTreatmentsList: document.getElementById('past-treatments-list'),
+    treatmentFormTitle: document.getElementById('treatment-form-title'),
+    cancelTreatmentBtn: document.getElementById('cancel-treatment-btn'),
+    tRecordId: document.getElementById('treatment-id'),
     treatmentForm: document.getElementById('treatment-form'),
     tPatientName: document.getElementById('treatment-patient-name'),
     tPatientId: document.getElementById('treatment-patient-id'),
@@ -187,6 +197,17 @@ async function fetchPayments() {
     }
 }
 
+async function fetchTreatments() {
+    const { data, error } = await supabase
+        .from('treatments')
+        .select('*')
+        .order('createdat', { ascending: false });
+    if (error) console.error('Error fetching treatments:', error);
+    else {
+        _cachedTreatments = data;
+    }
+}
+
 function initGlobalListeners() {
     clearListeners();
 
@@ -194,6 +215,7 @@ function initGlobalListeners() {
     fetchAppointments();
     fetchPatients();
     fetchPayments();
+    fetchTreatments();
 
     // Real-time Subscriptions
     const apptsChannel = supabase.channel('appts-changes')
@@ -208,7 +230,11 @@ function initGlobalListeners() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, fetchPayments)
         .subscribe();
 
-    activeChannels.push(apptsChannel, patientsChannel, paymentsChannel);
+    const treatmentsChannel = supabase.channel('treatments-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'treatments' }, fetchTreatments)
+        .subscribe();
+
+    activeChannels.push(apptsChannel, patientsChannel, paymentsChannel, treatmentsChannel);
 }
 
 function renderPatientsUI() {
@@ -237,7 +263,7 @@ function renderPatientsUI() {
                         </button>
                     </div>
                 </td>
-                <td><button class="btn btn-sm btn-primary" onclick="viewPatient('${safeName}', '${safePhone}', '${visitDateObj}', '${notesEnc}')">View</button></td>
+                <td><button class="btn btn-sm btn-primary" onclick="viewPatient('${id}', '${safeName}', '${safePhone}', '${visitDateObj}', '${notesEnc}')">View</button></td>
             </tr>
         `;
 
@@ -245,7 +271,7 @@ function renderPatientsUI() {
         if (data.visitdate === currentDateStr) {
             presentCount++;
             activeTreatmentsHtml += `
-                <li class="active-patient-item" onclick="selectPatientForTreatment('${id}', '${data.name}')">
+                <li class="active-patient-item" onclick="selectPatientForTreatment('${id}', '${data.name}', event)">
                     <strong>${data.name}</strong>
                     <span class="item-phone">${data.phone}</span>
                 </li>
@@ -467,21 +493,57 @@ window.markAttendance = async (apptId, status, name, phone) => {
     }
 }
 
-window.selectPatientForTreatment = (id, name) => {
+window.selectPatientForTreatment = (id, name, ev) => {
     // Styling the active list
-    document.querySelectorAll('.active-patient-item').forEach(el => el.classList.remove('selected'));
-    event.currentTarget.classList.add('selected');
+    if (ev && ev.currentTarget) {
+        document.querySelectorAll('.active-patient-item').forEach(el => el.classList.remove('selected'));
+        ev.currentTarget.classList.add('selected');
+    }
 
     ui.treatmentPlaceholder.style.display = 'none';
-    ui.treatmentForm.style.display = 'block';
+    ui.treatmentActiveContainer.style.display = 'block';
+    ui.treatmentForm.style.display = 'none';
     
     ui.tPatientName.textContent = `Treating: ${name}`;
     ui.tPatientId.value = id;
+    ui.tRecordId.value = '';
     
-    // Clear form
-    ui.tDetails.value = '';
-    ui.tMeds.value = '';
-    ui.tNotes.value = '';
+    // Render past treatments list
+    const patTreatments = _cachedTreatments.filter(t => t.patientId == id || t.patientName === name);
+    if (patTreatments.length === 0) {
+        ui.pastTreatmentsList.innerHTML = '<p style="color: var(--text-muted); text-align: center; padding: 24px; background: white; border-radius: 8px; border: 1px dashed var(--border-color);">No prior treatments found for this patient.</p>';
+        // Auto-open form if no previous treatments
+        if(ui.addNewTreatmentBtn) ui.addNewTreatmentBtn.click();
+    } else {
+        let hHtml = '<h4 style="margin-bottom: 12px; color: var(--text-muted);">Treatment History</h4><div style="display: flex; flex-direction: column; gap: 12px;">';
+        patTreatments.forEach(t => {
+            const dateStr = t.date || (t.createdat ? new Date(t.createdat).toLocaleDateString() : '-');
+            const detEsc = encodeURIComponent(t.details || '');
+            const medEsc = encodeURIComponent(t.medications || '');
+            const notesEsc = encodeURIComponent(t.notes || '');
+            hHtml += `
+                <div style="padding: 16px; border: 1px solid var(--border-color); border-radius: 8px; background: white; display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div style="flex:1;">
+                        <strong style="color: var(--text-main); font-size: 1.05rem;">${dateStr}</strong>
+                        <p style="margin-top: 4px; color: var(--text-muted); font-size: 0.95rem;">${t.details || 'No details provided'}</p>
+                    </div>
+                    <button class="btn btn-sm btn-secondary" style="flex-shrink:0;" onclick="editPastTreatment('${t.id}', '${detEsc}', '${medEsc}', '${notesEsc}')"><i class="fa-solid fa-pencil"></i> Edit</button>
+                </div>
+            `;
+        });
+        hHtml += '</div>';
+        ui.pastTreatmentsList.innerHTML = hHtml;
+    }
+}
+
+window.editPastTreatment = (tId, detEsc, medEsc, notesEsc) => {
+    ui.treatmentForm.style.display = 'block';
+    ui.treatmentFormTitle.textContent = "Edit Existing Record";
+    ui.tRecordId.value = tId;
+    ui.tDetails.value = decodeURIComponent(detEsc);
+    ui.tMeds.value = decodeURIComponent(medEsc);
+    ui.tNotes.value = decodeURIComponent(notesEsc);
+    ui.treatmentForm.scrollIntoView({ behavior: 'smooth' });
 }
 
 window.viewProblem = (problemEnc) => {
@@ -495,12 +557,47 @@ window.viewProblem = (problemEnc) => {
     }
 }
 
-window.viewPatient = (name, phone, visit, notesEnc) => {
+window.viewPatient = (id, name, phone, visit, notesEnc) => {
     ui.viewPatName.textContent = name;
     ui.viewPatPhone.textContent = phone;
     ui.viewPatVisit.textContent = visit;
     ui.viewPatNotes.textContent = decodeURIComponent(notesEnc) || '-';
     
+    // Treatments
+    const patTreatments = _cachedTreatments.filter(t => t.patientId == id || t.patientName === name);
+    let tHtml = '';
+    if (patTreatments.length === 0) {
+        tHtml = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 16px;">No treatment history found.</td></tr>';
+    } else {
+        patTreatments.forEach(t => {
+            const dateStr = t.date || (t.createdat ? new Date(t.createdat).toLocaleDateString() : '-');
+            tHtml += `<tr>
+                <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">${dateStr}</td>
+                <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">${t.details || '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">${t.medications || '-'}</td>
+                <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">${t.notes || '-'}</td>
+            </tr>`;
+        });
+    }
+    if (ui.viewPatTreatments) ui.viewPatTreatments.innerHTML = tHtml;
+
+    // Payments
+    const patPayments = _cachedPayments.filter(p => p.patientId == id || p.patientName === name);
+    let pHtml = '';
+    if (patPayments.length === 0) {
+        pHtml = '<tr><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 16px;">No payment history found.</td></tr>';
+    } else {
+        patPayments.forEach(p => {
+            const dateStr = p.createdat ? new Date(p.createdat).toLocaleDateString() : '-';
+            pHtml += `<tr>
+                <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">${dateStr}</td>
+                <td style="padding: 10px; border-bottom: 1px solid var(--border-color); font-weight: 500;">₹${p.amount || 0}</td>
+                <td style="padding: 10px; border-bottom: 1px solid var(--border-color);">${p.method || '-'}</td>
+            </tr>`;
+        });
+    }
+    if (ui.viewPatPayments) ui.viewPatPayments.innerHTML = pHtml;
+
     ui.modalContainer.style.display = 'flex';
     document.querySelectorAll('.modal-card').forEach(m => m.style.display = 'none');
     ui.modalViewPatient.style.display = 'block';
@@ -589,27 +686,71 @@ document.getElementById('add-payment-form').addEventListener('submit', async (e)
     }
 });
 
-ui.treatmentForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    try {
-        const { error } = await supabase
-            .from('treatments')
-            .insert([{
-                patientId: ui.tPatientId.value,
-                patientName: ui.tPatientName.textContent.replace('Treating: ', ''),
-                details: ui.tDetails.value.trim(),
-                medications: ui.tMeds.value.trim(),
-                notes: ui.tNotes.value.trim(),
-                date: currentDateStr
-            }]);
-        if (error) throw error;
-        showToast('Treatment notes saved to medical records', 'success');
+if(ui.addNewTreatmentBtn) {
+    ui.addNewTreatmentBtn.addEventListener('click', () => {
+        ui.treatmentForm.style.display = 'block';
+        ui.treatmentFormTitle.textContent = "Add New Treatment";
+        ui.tRecordId.value = '';
+        ui.treatmentForm.reset();
+        ui.tDetails.focus();
+    });
+}
+if(ui.cancelTreatmentBtn) {
+    ui.cancelTreatmentBtn.addEventListener('click', () => {
         ui.treatmentForm.reset();
         ui.treatmentForm.style.display = 'none';
-        ui.treatmentPlaceholder.style.display = 'flex';
-        document.querySelectorAll('.active-patient-item').forEach(el => el.classList.remove('selected'));
+        ui.tRecordId.value = '';
+    });
+}
+
+ui.treatmentForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const tId = ui.tRecordId.value;
+    
+    try {
+        if (tId) {
+            // Update existing
+            const { error } = await supabase
+                .from('treatments')
+                .update({
+                    details: ui.tDetails.value.trim(),
+                    medications: ui.tMeds.value.trim(),
+                    notes: ui.tNotes.value.trim()
+                })
+                .eq('id', tId);
+            if (error) throw error;
+            showToast('Treatment record updated successfully', 'success');
+        } else {
+            // Insert new
+            const { error } = await supabase
+                .from('treatments')
+                .insert([{
+                    patientId: ui.tPatientId.value,
+                    patientName: ui.tPatientName.textContent.replace('Treating: ', ''),
+                    details: ui.tDetails.value.trim(),
+                    medications: ui.tMeds.value.trim(),
+                    notes: ui.tNotes.value.trim(),
+                    date: currentDateStr
+                }]);
+            if (error) throw error;
+            showToast('Treatment notes saved to medical records', 'success');
+        }
+        
+        ui.treatmentForm.reset();
+        ui.treatmentForm.style.display = 'none';
+        
+        // Refresh the patient's view
+        const currentPatientId = ui.tPatientId.value;
+        const currentPatientName = ui.tPatientName.textContent.replace('Treating: ', '');
+        setTimeout(() => {
+            if (window.selectPatientForTreatment) {
+                window.selectPatientForTreatment(currentPatientId, currentPatientName, null);
+            }
+        }, 500);
+        
     } catch(err) {
         showToast('Error saving treatment data', 'error');
+        console.error(err);
     }
 });
 
