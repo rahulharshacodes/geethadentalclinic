@@ -39,10 +39,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    background-image: url('../logbg.jpg');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
+    background: linear-gradient(135deg, var(--primary-light) 0%, #dbeafe 50%, var(--secondary-light) 100%);
     padding: 20px;
 }
 
