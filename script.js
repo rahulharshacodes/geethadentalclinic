@@ -307,4 +307,46 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date().toISOString().split('T')[0];
         dateInput.setAttribute('min', today);
     }
+
+    // ─── Block confirmed time slots ───
+    const patTimeSelect = document.getElementById('patTime');
+
+    async function updateBookedSlots(selectedDate) {
+        if (!selectedDate || !patTimeSelect) return;
+
+        // Reset all options first
+        Array.from(patTimeSelect.options).forEach(opt => {
+            opt.disabled = false;
+            opt.textContent = opt.textContent.replace(' — Booked', '');
+        });
+
+        // Fetch confirmed appointments for the selected date
+        const { data, error } = await supabase
+            .from('appointments')
+            .select('time')
+            .eq('date', selectedDate)
+            .eq('status', 'confirmed');
+
+        if (error || !data) return;
+
+        const bookedTimes = new Set(data.map(a => a.time));
+
+        Array.from(patTimeSelect.options).forEach(opt => {
+            if (opt.value && bookedTimes.has(opt.value)) {
+                opt.disabled = true;
+                opt.textContent = opt.value + ' — Booked';
+            }
+        });
+
+        // If the currently selected slot is now booked, reset the selection
+        if (patTimeSelect.value && bookedTimes.has(patTimeSelect.value)) {
+            patTimeSelect.value = '';
+        }
+    }
+
+    if (dateInput && patTimeSelect) {
+        dateInput.addEventListener('change', () => {
+            updateBookedSlots(dateInput.value);
+        });
+    }
 });
