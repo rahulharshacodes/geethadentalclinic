@@ -381,9 +381,19 @@
 
                 <!-- Section: Analytics -->
                 <section id="section-analytics" class="dashboard-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                        <div>
+                            <h2 style="font-size: 1.25rem; font-weight: 600;">Analytics & Insights</h2>
+                        </div>
+                        <select id="analytics-time-filter" class="form-select" style="padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border-color); outline: none;">
+                            <option value="daily">Daily View</option>
+                            <option value="weekly">Weekly View</option>
+                            <option value="monthly" selected>Monthly View</option>
+                        </select>
+                    </div>
                     <div class="analytics-grid">
                         <div class="chart-large-card">
-                            <h3>Income Trend (Last 12 Months)</h3>
+                            <h3 id="chart-title-income">Income Trend</h3>
                             <canvas id="incomeTrendChart"></canvas>
                         </div>
                         <div class="chart-row">
@@ -392,7 +402,7 @@
                                 <canvas id="appointmentStatusChart"></canvas>
                             </div>
                             <div class="chart-medium-card">
-                                <h3>Daily Patient Traffic</h3>
+                                <h3 id="chart-title-traffic">Patient Traffic</h3>
                                 <canvas id="dailyTrafficChart"></canvas>
                             </div>
                         </div>

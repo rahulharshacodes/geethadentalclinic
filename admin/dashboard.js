@@ -948,29 +948,120 @@ function renderCharts() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Income Trend Chart (Live Data Grouped by Month)
-    const monthlyRev = {};
+    // Custom Time Filtering for Analytics
+    const timeFilter = document.getElementById('analytics-time-filter') ? document.getElementById('analytics-time-filter').value : 'monthly';
+    const endDate = new Date(currentDateStr);
+    endDate.setHours(23, 59, 59, 999);
+    
+    let startDate = new Date(endDate);
+    let numPeriods = 7;
+    let formatLabel = (d) => d.toLocaleDateString();
+    let getPeriodKey = (d) => ''; 
+
+    if (timeFilter === 'daily') {
+        numPeriods = 7; 
+        startDate.setDate(endDate.getDate() - 6);
+        startDate.setHours(0, 0, 0, 0);
+        formatLabel = (d) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        getPeriodKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    } else if (timeFilter === 'weekly') {
+        numPeriods = 8; 
+        startDate.setDate(endDate.getDate() - (7 * 7));
+        startDate.setHours(0, 0, 0, 0);
+        formatLabel = (d) => `Week of ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        getPeriodKey = (d) => {
+            const diffDays = Math.floor((endDate - d) / (1000 * 60 * 60 * 24));
+            const weekIndex = Math.floor(diffDays / 7);
+            return `week-${weekIndex}`; 
+        };
+    } else { // monthly
+        numPeriods = 12; 
+        startDate.setMonth(endDate.getMonth() - 11);
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        formatLabel = (d) => d.toLocaleString('en-US', { month: 'short', year: 'numeric' });
+        getPeriodKey = (d) => `${d.getFullYear()}-${d.getMonth()}`;
+    }
+
+    const periods = [];
+    const incomeDataMap = {};
+    const trafficDataMap = {};
+    
+    if (timeFilter === 'daily') {
+        for(let i = numPeriods - 1; i >= 0; i--) {
+            const d = new Date(endDate);
+            d.setDate(d.getDate() - i);
+            const key = getPeriodKey(d);
+            periods.push({ key, label: formatLabel(d) });
+            incomeDataMap[key] = 0; trafficDataMap[key] = 0;
+        }
+    } else if (timeFilter === 'weekly') {
+        for(let i = numPeriods - 1; i >= 0; i--) {
+            const d = new Date(endDate);
+            d.setDate(d.getDate() - (i * 7));
+            const key = `week-${i}`;
+            periods.push({ key, label: formatLabel(d) });
+            incomeDataMap[key] = 0; trafficDataMap[key] = 0;
+        }
+    } else { // monthly
+        for(let i = numPeriods - 1; i >= 0; i--) {
+            const d = new Date(endDate);
+            d.setMonth(d.getMonth() - i);
+            const key = getPeriodKey(d);
+            periods.push({ key, label: formatLabel(d) });
+            incomeDataMap[key] = 0; trafficDataMap[key] = 0;
+        }
+    }
+
+    // Process Analytics Data (Line/Bar Charts and Appointment Pie)
+    let conf = 0, pending = 0, rej = 0;
+
     _cachedPayments.forEach(data => {
         if(data.createdat) {
             const d = new Date(data.createdat);
-            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            monthlyRev[key] = (monthlyRev[key] || 0) + (Number(data.amount) || 0);
+            if(d >= startDate && d <= endDate) {
+                const key = getPeriodKey(d);
+                if(incomeDataMap[key] !== undefined) incomeDataMap[key] += (Number(data.amount) || 0);
+            }
         }
     });
-    
-    // Sort keys chronologically
-    const sortedKeys = Object.keys(monthlyRev).sort();
-    const incomeLabels = sortedKeys.map(k => {
-        const [y, m] = k.split('-');
-        return new Date(y, m - 1).toLocaleString('default', { month: 'short', year: 'numeric' });
-    });
-    const incomeData = sortedKeys.map(k => monthlyRev[k]);
 
-    if(incomeLabels.length === 0) {
-        incomeLabels.push('No Live Data');
-        incomeData.push(0);
+    _cachedPatients.forEach(p => {
+        if(p.createdat) {
+            const d = new Date(p.createdat);
+            if(d >= startDate && d <= endDate) {
+                const key = getPeriodKey(d);
+                if(trafficDataMap[key] !== undefined) trafficDataMap[key]++;
+            }
+        }
+    });
+
+    _cachedAppts.forEach(d => {
+        if(d.createdat) {
+            const dt = new Date(d.createdat);
+            if(dt >= startDate && dt <= endDate) {
+                if(d.status === 'confirmed') conf++;
+                else if(d.status === 'pending') pending++;
+                else if(d.status === 'rejected') rej++;
+            }
+        }
+    });
+
+    const incomeLabels = periods.map(p => p.label);
+    const incomeData = periods.map(p => incomeDataMap[p.key]);
+
+    const trafficLabels = periods.map(p => p.label);
+    const trafficData = periods.map(p => trafficDataMap[p.key]);
+
+    // Update Titles
+    if(document.getElementById('chart-title-income')) {
+        document.getElementById('chart-title-income').textContent = timeFilter === 'daily' ? 'Income Trend (Last 7 Days)' : (timeFilter === 'weekly' ? 'Income Trend (Last 8 Weeks)' : 'Income Trend (Last 12 Months)');
+    }
+    if(document.getElementById('chart-title-traffic')) {
+        document.getElementById('chart-title-traffic').textContent = timeFilter === 'daily' ? 'Patient Traffic (Last 7 Days)' : (timeFilter === 'weekly' ? 'Patient Traffic (Last 8 Weeks)' : 'Patient Traffic (Last 12 Months)');
     }
 
+    // Render Income Trend
     const incCanvas = document.getElementById('incomeTrendChart');
     if(charts.inc) charts.inc.destroy();
     charts.inc = new Chart(incCanvas, {
@@ -978,7 +1069,7 @@ function renderCharts() {
         data: {
             labels: incomeLabels,
             datasets: [{
-                label: 'Monthly Income (₹)',
+                label: 'Income (₹)',
                 data: incomeData,
                 borderColor: primary,
                 backgroundColor: primaryLight,
@@ -989,14 +1080,7 @@ function renderCharts() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Appointment Status Pie Chart (Live Data Only)
-    let conf = 0, pending = 0, rej = 0;
-    _cachedAppts.forEach(d => {
-        if(d.status === 'confirmed') conf++;
-        else if(d.status === 'pending') pending++;
-        else if(d.status === 'rejected') rej++;
-    });
-
+    // Render Appointment Status
     const appCanvas = document.getElementById('appointmentStatusChart');
     if(charts.app) charts.app.destroy();
     charts.app = new Chart(appCanvas, {
@@ -1012,35 +1096,7 @@ function renderCharts() {
         options: { responsive: true, maintainAspectRatio: false }
     });
 
-    // Daily Traffic Chart (Last 7 Days - Live Data Only)
-    const trafficLabels = [];
-    const trafficData = [];
-    
-    // Setup last 7 days array
-    for(let i=6; i>=0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
-        trafficLabels.push(d.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' }));
-        trafficData.push(0);
-    }
-
-    _cachedPatients.forEach(p => {
-        const d = p.createdat ? new Date(p.createdat) : null;
-        if(d) {
-            d.setHours(0,0,0,0);
-            const today = new Date();
-            today.setHours(0,0,0,0);
-            const diffTime = today - d;
-            const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
-            
-            if(diffDays >= 0 && diffDays <= 6) {
-                // Map the difference back to the array index (6 is today, 0 is 6 days ago)
-                const index = 6 - diffDays;
-                trafficData[index]++;
-            }
-        }
-    });
-
+    // Render Daily Traffic
     const trafficCanvas = document.getElementById('dailyTrafficChart');
     if(charts.tra) charts.tra.destroy();
     charts.tra = new Chart(trafficCanvas, {
@@ -1056,4 +1112,9 @@ function renderCharts() {
         },
         options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
     });
+}
+
+// Attach filter listener
+if(document.getElementById('analytics-time-filter')) {
+    document.getElementById('analytics-time-filter').addEventListener('change', renderCharts);
 }
