@@ -393,9 +393,11 @@ function renderAppointmentsUI() {
                             ${(!isPresent && !isAbsent) ? `
                                 <button class="btn btn-sm btn-primary" onclick="markAttendance('${id}', 'present', '${data.name}', '${data.phone}')">Present</button>
                                 <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="markAttendance('${id}', 'absent')">Absent</button>
+                                ${data.time === 'Walk-in' ? `<button class="btn btn-sm" style="margin-left:8px; background:#fef2f2; color:#ef4444; border:1px solid #fca5a5; padding:4px 8px; font-size:0.8rem;" onclick="deleteWalkIn('${id}', '${data.name}')" title="Delete Walk-in"><i class="fa-solid fa-trash"></i></button>` : ''}
                             ` : `
                                 <span class="status-pill ${isPresent ? 'status-confirmed' : 'status-rejected'}">${(data.attendance || '').toUpperCase()}</span>
                                 <button class="btn btn-sm" style="margin-left:8px; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 8px; font-size:0.8rem;" onclick="markAttendance('${id}', null, '${data.name}')"><i class="fa-solid fa-rotate-left"></i> Undo</button>
+                                ${data.time === 'Walk-in' ? `<button class="btn btn-sm" style="margin-left:8px; background:#fef2f2; color:#ef4444; border:1px solid #fca5a5; padding:4px 8px; font-size:0.8rem;" onclick="deleteWalkIn('${id}', '${data.name}')" title="Delete Walk-in"><i class="fa-solid fa-trash"></i></button>` : ''}
                             `}
                             <button class="btn btn-sm" style="margin-left:12px; border-radius:50%; width:32px; height:32px; padding:0; background:#f1f5f9; color:#475569;" onclick="viewProblem('${problemEnc}')" title="View Problem">
                                 <i class="fa-solid fa-file-waveform"></i>
@@ -490,6 +492,21 @@ window.markAttendance = async (apptId, status, name, phone) => {
     } catch (e) {
         console.error(e);
         showToast('Failed to mark attendance', 'error');
+    }
+}
+
+window.deleteWalkIn = async (apptId, patName) => {
+    if (!confirm(`Are you sure you want to completely delete the walk-in record for ${patName}?`)) return;
+    try {
+        const { error: apptErr } = await supabase.from('appointments').delete().eq('id', apptId);
+        if (apptErr) throw apptErr;
+        
+        await supabase.from('patients').delete().match({ name: patName, visitdate: currentDateStr });
+        
+        showToast('Walk-in record completely deleted', 'success');
+    } catch (e) {
+        console.error(e);
+        showToast('Error deleting walk-in record', 'error');
     }
 }
 
