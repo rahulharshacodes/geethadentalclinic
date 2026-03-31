@@ -72,6 +72,7 @@ const ui = {
     // Filters
     apptSearch: document.getElementById('appointment-search'),
     apptFilter: document.getElementById('appointment-filter'),
+    paySearch: document.getElementById('search-payments'),
 
     // Treatment Form
     treatmentList: document.getElementById('active-treatment-list'),
@@ -108,8 +109,15 @@ function initDateControl() {
     ui.datePicker.addEventListener('change', (e) => {
         currentDateStr = e.target.value;
         updateDateLabel();
+        
+        // Clear out any old patient view when date changes
+        if (ui.treatmentPlaceholder) ui.treatmentPlaceholder.style.display = 'flex';
+        if (ui.treatmentActiveContainer) ui.treatmentActiveContainer.style.display = 'none';
+        if (ui.treatmentForm) ui.treatmentForm.style.display = 'none';
+        
         renderAppointmentsUI();
         renderPatientsUI();
+        renderPaymentsUI();
     });
 }
 
@@ -305,17 +313,33 @@ function renderPaymentsUI() {
     let monthRev = 0;
     const currentMonth = new Date().getMonth();
 
+    const searchQ = ui.paySearch ? ui.paySearch.value.trim().toLowerCase() : '';
+
     _cachedPayments.forEach(data => {
         const amount = Number(data.amount) || 0;
+        
+        // Total revenue uses everything 
         totalRev += amount;
         
         if (data.createdat) {
             const dateObj = new Date(data.createdat);
             if (dateObj.getMonth() === currentMonth) monthRev += amount;
             
+            // Map payment date to string compatible with currentDateStr (YYYY-MM-DD or local)
+            // Postgre timestamp usually parses in UTC. In original script we didn't filter by date.
+            const pYear = dateObj.getFullYear();
+            const pMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const pDay = String(dateObj.getDate()).padStart(2, '0');
+            const payDateStr = `${pYear}-${pMonth}-${pDay}`;
+
+            if (payDateStr !== currentDateStr) return; // Hide payments from other days
+
+            const pName = data.patientname || data.patientName || 'Unknown';
+            if (searchQ && !pName.toLowerCase().includes(searchQ)) return;
+
             payHtml += `
                 <tr>
-                    <td><strong>${data.patientname || data.patientName || 'Unknown'}</strong></td>
+                    <td><strong>${pName}</strong></td>
                     <td>₹${amount}</td>
                     <td>${data.method}</td>
                     <td>${dateObj.toLocaleDateString()}</td>
@@ -324,9 +348,16 @@ function renderPaymentsUI() {
         }
     });
 
-    ui.paymentsTable.innerHTML = payHtml || '<tr><td colspan="4">No payments found.</td></tr>';
+    ui.paymentsTable.innerHTML = payHtml || '<tr><td colspan="4">No payments found for this date.</td></tr>';
     ui.statTotalRev.textContent = `₹${totalRev.toLocaleString('en-IN')}`;
     ui.statMonthlyInc.textContent = `₹${monthRev.toLocaleString('en-IN')}`;
+    
+    // Always sync the charts when payments UI updates
+    renderCharts();
+}
+
+if (ui.paySearch) {
+    ui.paySearch.addEventListener('input', renderPaymentsUI);
 }
 
 // Separate render function to allow filtering without refetching
@@ -891,6 +922,11 @@ function renderCharts() {
     // Payment Methods Pie Chart
     let cash = 0, upi = 0, card = 0;
     _cachedPayments.forEach(data => {
+        if (!data.createdat) return;
+        const d = new Date(data.createdat);
+        const payDateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        if (payDateStr !== currentDateStr) return;
+        
         const method = data.method;
         if(method === 'Cash') cash++;
         else if(method === 'UPI') upi++;
