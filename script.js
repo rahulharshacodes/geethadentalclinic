@@ -323,13 +323,23 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fetch confirmed appointments for the selected date
         const { data, error } = await supabase
             .from('appointments')
-            .select('time')
+            .select('time, status, date')
             .eq('date', selectedDate)
             .eq('status', 'confirmed');
 
-        if (error || !data) return;
+        console.log('[Slot Check] Date:', selectedDate, '| Data:', data, '| Error:', error);
+
+        if (error) {
+            console.warn('[Slot Check] Supabase RLS may be blocking public reads. Grant SELECT on appointments for anon role in Supabase dashboard.');
+            return;
+        }
+        if (!data || data.length === 0) {
+            console.log('[Slot Check] No confirmed appointments found for this date.');
+            return;
+        }
 
         const bookedTimes = new Set(data.map(a => a.time));
+        console.log('[Slot Check] Booked times:', [...bookedTimes]);
 
         Array.from(patTimeSelect.options).forEach(opt => {
             if (opt.value && bookedTimes.has(opt.value)) {
