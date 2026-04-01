@@ -82,6 +82,8 @@ const ui = {
     apptSearch: document.getElementById('appointment-search'),
     apptFilter: document.getElementById('appointment-filter'),
     paySearch: document.getElementById('search-payments'),
+    patSearch: document.getElementById('patient-search'),
+    patFilter: document.getElementById('patient-filter'),
 
     // Treatment Form
     treatmentList: document.getElementById('active-treatment-list'),
@@ -271,9 +273,34 @@ function renderPatientsUI() {
     let activeTreatmentsHtml = '';
     let paymentOptionsHtml = '<option value="">Select Patient</option>';
     
+    // Filtering Logic
+    const searchTerm = ui.patSearch ? ui.patSearch.value.trim().toLowerCase() : '';
+    const filterType = ui.patFilter ? ui.patFilter.value : 'recent';
+    const anchorDate = parseLocalYYYYMMDD(currentDateStr);
+    
     _cachedPatients.forEach(data => {
         const id = data.id;
-        const visitDateObj = data.createdat ? new Date(data.createdat).toLocaleDateString() : 'Walk-in';
+        const visitDateStr = data.visitdate || '';
+        const visitDateObj = visitDateStr ? parseLocalYYYYMMDD(visitDateStr) : null;
+        
+        // 1. Search Filter (Name or Phone)
+        const nameMatch = (data.name || '').toLowerCase().includes(searchTerm);
+        const phoneMatch = (data.phone || '').toLowerCase().includes(searchTerm);
+        if (searchTerm && !nameMatch && !phoneMatch) return;
+
+        // 2. Date Range Filter
+        if (filterType === 'recent' && anchorDate) {
+            if (!visitDateObj) return; // Skip if no visit date
+            
+            // Calculate difference in days
+            const diffTime = anchorDate - visitDateObj;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Show only if within current date down to previous 3 days (total 4 days window)
+            if (diffDays < 0 || diffDays > 3) return;
+        }
+
+        const displayDate = data.createdat ? new Date(data.createdat).toLocaleDateString() : (visitDateStr || 'Walk-in');
         const notesEnc = encodeURIComponent(data.notes || '').replace(/'/g, "%27");
         const safeName = (data.name || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
         const safePhone = (data.phone || '').replace(/'/g, "\\'").replace(/"/g, "&quot;");
@@ -282,7 +309,7 @@ function renderPatientsUI() {
             <tr>
                 <td><strong>${data.name}</strong></td>
                 <td>${data.phone}</td>
-                <td>${visitDateObj}</td>
+                <td>${displayDate}</td>
                 <td>
                     <div style="display:flex; align-items:center; justify-content:space-between; gap: 8px;">
                         <span>${data.notes || '-'}</span>
@@ -291,11 +318,11 @@ function renderPatientsUI() {
                         </button>
                     </div>
                 </td>
-                <td><button class="btn btn-sm btn-primary" onclick="viewPatient('${id}', '${safeName}', '${safePhone}', '${visitDateObj}', '${notesEnc}')">View</button></td>
+                <td><button class="btn btn-sm btn-primary" onclick="viewPatient('${id}', '${safeName}', '${safePhone}', '${displayDate}', '${notesEnc}')">View</button></td>
             </tr>
         `;
 
-        // Today's patients go to treatments list and payment dropdown
+        // Today's patients go to treatments list and payment dropdown (always relative to currentDateStr)
         if (data.visitdate === currentDateStr) {
             presentCount++;
             activeTreatmentsHtml += `
@@ -308,7 +335,7 @@ function renderPatientsUI() {
         }
     });
 
-    ui.patientsTable.innerHTML = patHtml || '<tr><td colspan="5">No patients found.</td></tr>';
+    ui.patientsTable.innerHTML = patHtml || '<tr><td colspan="5" style="text-align:center; padding: 24px;">No patients match the current filter.</td></tr>';
     ui.statPatientsPresent.textContent = presentCount;
     
     ui.treatmentList.innerHTML = activeTreatmentsHtml || '<div style="padding:16px;color:#64748b;text-align:center;">No patients present today.</div>';
@@ -739,6 +766,18 @@ ui.apptFilter.addEventListener('change', () => {
 if (ui.apptSearch) {
     ui.apptSearch.addEventListener('input', () => {
         renderAppointmentsUI();
+    });
+}
+
+if (ui.patSearch) {
+    ui.patSearch.addEventListener('input', () => {
+        renderPatientsUI();
+    });
+}
+
+if (ui.patFilter) {
+    ui.patFilter.addEventListener('change', () => {
+        renderPatientsUI();
     });
 }
 
