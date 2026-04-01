@@ -147,9 +147,11 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Testimonial Carousel (3 items visible)
+    const testimonialContainer = document.getElementById('testimonialCarousel');
     const testimonialSlides = document.querySelectorAll('.testimonial-carousel .testimonial-card');
     if (testimonialSlides.length > 0) {
         let currentSlideIndex = 0;
+        let isPaused = false;
         
         function updateCarousel() {
             testimonialSlides.forEach((slide, index) => {
@@ -169,9 +171,21 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCarousel();
         
         setInterval(() => {
-            currentSlideIndex = (currentSlideIndex + 1) % testimonialSlides.length;
-            updateCarousel();
+            if (!isPaused) {
+                currentSlideIndex = (currentSlideIndex + 1) % testimonialSlides.length;
+                updateCarousel();
+            }
         }, 3000);
+
+        // Pause on hover
+        if (testimonialContainer) {
+            testimonialContainer.addEventListener('mouseenter', () => {
+                isPaused = true;
+            });
+            testimonialContainer.addEventListener('mouseleave', () => {
+                isPaused = false;
+            });
+        }
     }
 
     // Visual Clinic Tour Carousel
