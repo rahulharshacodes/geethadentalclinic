@@ -74,9 +74,10 @@ const ui = {
     // Stat Cards
     statTodayAppts: document.getElementById('stat-today-appts'),
     statPatientsPresent: document.getElementById('stat-patients-present'),
-    statPatientsPresent: document.getElementById('stat-patients-present'),
-    statTotalRev: document.getElementById('stat-total-revenue'),
+    statAbsent: document.getElementById('stat-absent-patients'),
+    statDailyInc: document.getElementById('stat-daily-income'),
     statMonthlyInc: document.getElementById('stat-monthly-income'),
+    statYearlyInc: document.getElementById('stat-yearly-income'),
     
     // Filters
     apptSearch: document.getElementById('appointment-search'),
@@ -345,51 +346,128 @@ function renderPatientsUI() {
 
 function renderPaymentsUI() {
     let payHtml = '';
-    let totalRev = 0;
+    let dailyRev = 0;
     let monthRev = 0;
-    const currentMonth = new Date().getMonth();
+    let yearRev = 0;
+
+    // Daily Donut counters
+    let dCash = 0, dUpi = 0, dCard = 0;
+
+    const targetDate = parseLocalYYYYMMDD(currentDateStr);
+    if (!targetDate) return;
+
+    const tYear = targetDate.getFullYear();
+    const tMonth = targetDate.getMonth();
+    const tDay = targetDate.getDate();
 
     const searchQ = ui.paySearch ? ui.paySearch.value.trim().toLowerCase() : '';
 
     _cachedPayments.forEach(data => {
         const amount = Number(data.amount) || 0;
         
-        // Total revenue uses everything 
-        totalRev += amount;
-        
         if (data.createdat) {
-            const dateObj = new Date(data.createdat);
-            if (dateObj.getMonth() === currentMonth) monthRev += amount;
-            
-            // Map payment date to string compatible with currentDateStr (YYYY-MM-DD or local)
-            // Postgre timestamp usually parses in UTC. In original script we didn't filter by date.
+            // Support both ISO strings and YYYY-MM-DD
+            const dateObj = data.createdat.includes('T') ? new Date(data.createdat) : parseLocalYYYYMMDD(data.createdat);
+            if (!dateObj) return;
+
             const pYear = dateObj.getFullYear();
-            const pMonth = String(dateObj.getMonth() + 1).padStart(2, '0');
-            const pDay = String(dateObj.getDate()).padStart(2, '0');
-            const payDateStr = `${pYear}-${pMonth}-${pDay}`;
+            const pMonth = dateObj.getMonth();
+            const pDay = dateObj.getDate();
 
-            if (payDateStr !== currentDateStr) return; // Hide payments from other days
+            // Yearly calculation
+            if (pYear === tYear) yearRev += amount;
 
-            const pName = data.patientname || data.patientName || 'Unknown';
-            if (searchQ && !pName.toLowerCase().includes(searchQ)) return;
+            // Monthly calculation
+            if (pYear === tYear && pMonth === tMonth) monthRev += amount;
 
-            payHtml += `
-                <tr>
-                    <td><strong>${pName}</strong></td>
-                    <td>₹${amount}</td>
-                    <td>${data.method}</td>
-                    <td>${dateObj.toLocaleDateString()}</td>
-                </tr>
-            `;
+            // Daily calculation & Table check
+            if (pYear === tYear && pMonth === tMonth && pDay === tDay) {
+                dailyRev += amount;
+                
+                // Donut distribution (Daily only)
+                const method = data.method;
+                if(method === 'Cash') dCash++;
+                else if(method === 'UPI' || method.includes('UPI')) dUpi++;
+                else if(method === 'Card') dCard++;
+
+                // Table Row
+                const pName = data.patientname || data.patientName || 'Unknown';
+                if (!searchQ || pName.toLowerCase().includes(searchQ)) {
+                    payHtml += `
+                        <tr>
+                            <td><strong>${pName}</strong></td>
+                            <td>₹${amount}</td>
+                            <td>${data.method}</td>
+                            <td>${dateObj.toLocaleDateString()}</td>
+                        </tr>
+                    `;
+                }
+            }
         }
     });
 
-    ui.paymentsTable.innerHTML = payHtml || '<tr><td colspan="4">No payments found for this date.</td></tr>';
-    ui.statTotalRev.textContent = `₹${totalRev.toLocaleString('en-IN')}`;
-    ui.statMonthlyInc.textContent = `₹${monthRev.toLocaleString('en-IN')}`;
+    ui.paymentsTable.innerHTML = payHtml || '<tr><td colspan="4" style="text-align:center; padding: 24px; color: var(--text-muted);">No payments found for this date.</td></tr>';
     
-    // Always sync the charts when payments UI updates
-    renderCharts();
+    if (ui.statDailyInc) ui.statDailyInc.textContent = `₹${dailyRev.toLocaleString('en-IN')}`;
+    if (ui.statMonthlyInc) ui.statMonthlyInc.textContent = `₹${monthRev.toLocaleString('en-IN')}`;
+    if (ui.statYearlyInc) ui.statYearlyInc.textContent = `₹${yearRev.toLocaleString('en-IN')}`;
+    
+    // Update Daily Donut Chart
+    const pmCanvas = document.getElementById('paymentMethodChart');
+    if (pmCanvas) {
+        if (charts.pm) charts.pm.destroy();
+        
+        const totalPayments = dCash + dUpi + dCard;
+        
+        if (totalPayments === 0) {
+            // Show "No Data" state
+            const ctx = pmCanvas.getContext('2d');
+            ctx.clearRect(0, 0, pmCanvas.width, pmCanvas.height);
+            // Optionally draw a gray ring
+            charts.pm = new Chart(pmCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['No Data'],
+                    datasets: [{
+                        data: [1],
+                        backgroundColor: ['#f1f5f9'],
+                        borderWidth: 0,
+                        weight: 0.1
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    },
+                    cutout: '80%'
+                }
+            });
+        } else {
+            charts.pm = new Chart(pmCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Cash', 'UPI', 'Card'],
+                    datasets: [{
+                        data: [dCash, dUpi, dCard],
+                        backgroundColor: ['#10b981', '#2563eb', '#f59e0b'],
+                        borderWidth: 0,
+                        cutout: '70%'
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { boxWidth: 12, padding: 15, font: { size: 11 } } },
+                        tooltip: { enabled: true }
+                    }
+                }
+            });
+        }
+    }
 }
 
 if (ui.paySearch) {
@@ -1172,22 +1250,13 @@ function renderCharts() {
         });
     }
 
-    // Render Methodology Distribution Chart (Doughnut)
-    const pmCanvas = document.getElementById('paymentMethodChart');
-    if(pmCanvas) {
-        if(charts.pm) charts.pm.destroy();
-        charts.pm = new Chart(pmCanvas, {
-            type: 'doughnut',
-            data: {
-                labels: ['Cash', 'UPI', 'Card'],
-                datasets: [{
-                    data: [cash, upi, card],
-                    backgroundColor: [success, primary, warning],
-                    borderWidth: 0
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
+    // methodology Chart (only in Analytics tab if needed, but we now handle it in renderPaymentsUI)
+    // We'll skip rendering it here to avoid conflicts, or only render if current section is analytics
+    const activeSection = document.querySelector('.dashboard-section.active');
+    if (activeSection && activeSection.id === 'section-analytics') {
+        const pmCanvas = document.getElementById('paymentMethodChart'); // Note: it's actually in Payment section
+        // If we want a separate one for analytics, we'd need a different ID.
+        // For now, let's just make sure Analytics doesn't break the Payment section one.
     }
 
     // Render Traffic Bar Chart
