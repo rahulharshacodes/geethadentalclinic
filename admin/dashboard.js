@@ -400,6 +400,7 @@ function renderPaymentsUI() {
                     payHtml += `
                         <tr>
                             <td><strong>${pName}</strong></td>
+                            <td style="color: var(--text-muted); font-size: 0.9rem;">${data.treatmentcategory || 'Other'}</td>
                             <td>₹${amount}</td>
                             <td>${data.method}</td>
                             <td>${dateObj.toLocaleDateString()}</td>
@@ -1117,22 +1118,17 @@ let charts = {};
 function renderCharts() {
     if(!window.Chart) return;
     Chart.defaults.font.family = "'Inter', sans-serif";
-
-    // Re-usable color palette from CSS
+    const success = '#10b981';
     const primary = '#2563eb';
     const primaryLight = 'rgba(37, 99, 235, 0.1)';
-    const success = '#10b981';
-    const warning = '#f59e0b';
-    const danger = '#ef4444';
 
-    // ─── Range Calculation (Local Time) ───
-    const timeFilterSelector = document.getElementById('analytics-time-filter');
-    const timeFilter = timeFilterSelector ? timeFilterSelector.value : 'monthly';
-    const endDate = parseLocalYYYYMMDD(currentDateStr);
-    if (!endDate) return;
+    const anchorDate = parseLocalYYYYMMDD(currentDateStr);
+    if (!anchorDate) return;
+    
+    const endDate = new Date(anchorDate);
     endDate.setHours(23, 59, 59, 999);
     
-    let startDate = new Date(endDate);
+    let startDate = new Date(anchorDate);
     let numPeriods = 7;
     let formatLabel = (d) => d.toLocaleDateString();
     let getPeriodKey = (d) => ''; 
@@ -1165,73 +1161,52 @@ function renderCharts() {
     const periods = [];
     const incomeDataMap = {};
     const trafficDataMap = {};
-    
-    // Category-based aggregation (Daily/Weekly/Monthly)
     const treatVolMap = {};
     const treatIncMap = {};
-    
-    // Distribution Counters (Pie Charts)
     let cash = 0, upi = 0, card = 0;
     let conf = 0, pending = 0, rej = 0;
 
-    if (timeFilter === 'daily') {
-        for(let i = numPeriods - 1; i >= 0; i--) {
-            const d = new Date(endDate);
-            d.setDate(d.getDate() - i);
-            const key = getPeriodKey(d);
-            periods.push({ key, label: formatLabel(d) });
-            incomeDataMap[key] = 0; trafficDataMap[key] = 0;
-        }
-    } else if (timeFilter === 'weekly') {
-        for(let i = numPeriods - 1; i >= 0; i--) {
-            const d = new Date(endDate);
-            d.setDate(d.getDate() - (i * 7));
-            const key = `week-${i}`;
-            periods.push({ key, label: formatLabel(d) });
-            incomeDataMap[key] = 0; trafficDataMap[key] = 0;
-        }
-    } else { // monthly
-        for(let i = numPeriods - 1; i >= 0; i--) {
-            const d = new Date(endDate);
-            d.setMonth(d.getMonth() - i);
-            const key = getPeriodKey(d);
-            periods.push({ key, label: formatLabel(d) });
-            incomeDataMap[key] = 0; trafficDataMap[key] = 0;
-        }
+    // Initialize periods
+    for(let i = numPeriods - 1; i >= 0; i--) {
+        const d = new Date(endDate);
+        if (timeFilter === 'daily') d.setDate(d.getDate() - i);
+        else if (timeFilter === 'weekly') d.setDate(d.getDate() - (i * 7));
+        else d.setMonth(d.getMonth() - i);
+        
+        const key = getPeriodKey(d);
+        periods.push({ key, label: formatLabel(d) });
+        incomeDataMap[key] = 0; 
+        trafficDataMap[key] = 0;
     }
 
-    // Process Financials & Methodology & Treatment Income Split
+    // Process Data
     _cachedPayments.forEach(data => {
-        const d = data.createdat ? (typeof data.createdat === 'string' && data.createdat.includes('-') ? parseLocalYYYYMMDD(data.createdat.split('T')[0]) : new Date(data.createdat)) : null;
+        const d = data.createdat ? (typeof data.createdat === 'string' ? parseLocalYYYYMMDD(data.createdat.split('T')[0]) : new Date(data.createdat)) : null;
         if(d && d >= startDate && d <= endDate) {
             const key = getPeriodKey(d);
             if(incomeDataMap[key] !== undefined) incomeDataMap[key] += (Number(data.amount) || 0);
             
             const method = data.method;
             if(method === 'Cash') cash++;
-            else if(method === 'UPI') upi++;
+            else if(method === 'UPI' || (method && method.includes('UPI'))) upi++;
             else if(method === 'Card') card++;
 
-            // Treatment Income Split (Case Insensitive)
-            const rawCat = data.treatmentcategory || data.treatmentCategory || 'Other';
+            const rawCat = data.treatmentcategory || 'Other';
             const cat = rawCat.charAt(0).toUpperCase() + rawCat.slice(1).toLowerCase();
             treatIncMap[cat] = (treatIncMap[cat] || 0) + (Number(data.amount) || 0);
         }
     });
 
-    // Process Treatment Volume Split
     _cachedTreatments.forEach(t => {
         const d = t.date ? parseLocalYYYYMMDD(t.date) : (t.createdat ? new Date(t.createdat) : null);
         if(d && d >= startDate && d <= endDate) {
             const rawDetails = t.details || 'Other';
-            // Extract category if it's the first word or just use first 20 chars
             const cat = rawDetails.split(',')[0].split('\n')[0].trim();
             const normalizedCat = cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
             treatVolMap[normalizedCat] = (treatVolMap[normalizedCat] || 0) + 1;
         }
     });
 
-    // Process Traffic
     _cachedPatients.forEach(p => {
         const d = p.visitdate ? parseLocalYYYYMMDD(p.visitdate) : (p.createdat ? new Date(p.createdat) : null);
         if(d && d >= startDate && d <= endDate) {
@@ -1240,7 +1215,6 @@ function renderCharts() {
         }
     });
 
-    // Process Appointment Status Distribution
     _cachedAppts.forEach(d => {
         const dt = d.date ? parseLocalYYYYMMDD(d.date) : (d.createdat ? new Date(d.createdat) : null);
         if(dt && dt >= startDate && dt <= endDate) {
@@ -1250,145 +1224,65 @@ function renderCharts() {
         }
     });
 
+    // ─── RENDERING ───
     const incomeLabels = periods.map(p => p.label);
     const incomeData = periods.map(p => incomeDataMap[p.key]);
-    const trafficLabels = periods.map(p => p.label);
-    const trafficData = periods.map(p => trafficDataMap[p.key]);
 
-    // Render Income Trend
+    // Income Trend
     const incCanvas = document.getElementById('incomeTrendChart');
     if(incCanvas) {
         if(charts.inc) charts.inc.destroy();
         charts.inc = new Chart(incCanvas, {
             type: 'line',
-            data: {
-                labels: incomeLabels,
-                datasets: [{
-                    label: 'Income (₹)',
-                    data: incomeData,
-                    borderColor: primary,
-                    backgroundColor: primaryLight,
-                    tension: 0.4,
-                    fill: true
-                }]
-            },
+            data: { labels: incomeLabels, datasets: [{ label: 'Income (₹)', data: incomeData, borderColor: primary, backgroundColor: primaryLight, tension: 0.4, fill: true }] },
             options: { responsive: true, maintainAspectRatio: false }
         });
     }
 
-    // Render Status Distribution Chart (Pie)
-    const appCanvas = document.getElementById('appointmentStatusChart');
-    if(appCanvas) {
-        if(charts.app) charts.app.destroy();
-        charts.app = new Chart(appCanvas, {
-            type: 'pie',
-            data: {
-                labels: ['Confirmed', 'Pending', 'Rejected'],
-                datasets: [{
-                    data: [conf, pending, rej],
-                    backgroundColor: [success, warning, danger],
-                    borderWidth: 0
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    }
-
-    // methodology Chart (only in Analytics tab if needed, but we now handle it in renderPaymentsUI)
-    // We'll skip rendering it here to avoid conflicts, or only render if current section is analytics
-    const activeSection = document.querySelector('.dashboard-section.active');
-    if (activeSection && activeSection.id === 'section-analytics') {
-        const pmCanvas = document.getElementById('paymentMethodChart'); // Note: it's actually in Payment section
-        // If we want a separate one for analytics, we'd need a different ID.
-        // For now, let's just make sure Analytics doesn't break the Payment section one.
-    }
-
-    // Render Treatment Volume Chart
+    // Treatment Volume
     const tvCanvas = document.getElementById('treatmentVolumeChart');
     if(tvCanvas) {
         if(charts.tv) charts.tv.destroy();
         const labels = Object.keys(treatVolMap);
         const data = Object.values(treatVolMap);
-        
         if (labels.length === 0) {
-            // Draw empty ring
-            charts.tv = new Chart(tvCanvas, {
-                type: 'doughnut',
-                data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#f1f5f9'], borderWidth: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '80%' }
-            });
+            charts.tv = new Chart(tvCanvas, { type: 'doughnut', data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#f1f5f9'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '80%' } });
         } else {
-            charts.tv = new Chart(tvCanvas, {
-                type: 'doughnut',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'],
-                        borderWidth: 0
-                    }]
-                },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } }
-                }
-            });
+            charts.tv = new Chart(tvCanvas, { type: 'doughnut', data: { labels: labels, datasets: [{ data: data, backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'], borderWidth: 0 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } } } });
         }
     }
 
-    // Render Treatment Income Chart
+    // Treatment Income
     const tiCanvas = document.getElementById('treatmentIncomeChart');
     if(tiCanvas) {
         if(charts.ti) charts.ti.destroy();
         const labels = Object.keys(treatIncMap);
         const data = Object.values(treatIncMap);
-        
         if (labels.length === 0) {
-            // Draw empty state
-            charts.ti = new Chart(tiCanvas, {
-                type: 'bar',
-                data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: ['#f8fafc'] }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
-            });
+            charts.ti = new Chart(tiCanvas, { type: 'bar', data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: ['#f8fafc'] }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } } });
         } else {
-            charts.ti = new Chart(tiCanvas, {
-                type: 'bar',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: 'Income (₹)',
-                        data: data,
-                        backgroundColor: '#10b981',
-                        borderRadius: 4
-                    }]
-                },
-                options: { 
-                    indexAxis: 'y',
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    scales: { x: { beginAtZero: true } },
-                    plugins: { legend: { display: false } }
-                }
-            });
+            charts.ti = new Chart(tiCanvas, { type: 'bar', data: { labels: labels, datasets: [{ label: 'Income (₹)', data: data, backgroundColor: '#10b981', borderRadius: 4 }] }, options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } } });
         }
     }
 
-    // Render Traffic Bar Chart
+    // Status Distribution
+    const appCanvas = document.getElementById('appointmentStatusChart');
+    if(appCanvas) {
+        if(charts.app) charts.app.destroy();
+        charts.app = new Chart(appCanvas, {
+            type: 'pie',
+            data: { labels: ['Confirmed', 'Pending', 'Rejected'], datasets: [{ data: [conf, pending, rej], backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+    }
+
+    // Traffic
     const trafficCanvas = document.getElementById('dailyTrafficChart');
     if(trafficCanvas) {
         if(charts.tra) charts.tra.destroy();
         charts.tra = new Chart(trafficCanvas, {
             type: 'bar',
-            data: {
-                labels: trafficLabels,
-                datasets: [{
-                    label: 'Patient Traffic',
-                    data: trafficData,
-                    backgroundColor: success,
-                    borderRadius: 4
-                }]
-            },
+            data: { labels: incomeLabels, datasets: [{ label: 'Patient Traffic', data: periods.map(p => trafficDataMap[p.key]), backgroundColor: success, borderRadius: 4 }] },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } }
         });
     }
