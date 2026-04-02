@@ -943,6 +943,7 @@ document.getElementById('add-payment-form').addEventListener('submit', async (e)
                 patientid: patId,
                 patientname: patName,
                 amount: Number(document.getElementById('payment-amount').value),
+                treatmentcategory: document.getElementById('payment-treatment-category').value,
                 method: document.getElementById('payment-method').value,
                 createdat: currentDateStr // Record on the selected dashboard date
             }]);
@@ -1143,6 +1144,10 @@ function renderCharts() {
     const incomeDataMap = {};
     const trafficDataMap = {};
     
+    // Category-based aggregation (Daily/Weekly/Monthly)
+    const treatVolMap = {};
+    const treatIncMap = {};
+    
     // Distribution Counters (Pie Charts)
     let cash = 0, upi = 0, card = 0;
     let conf = 0, pending = 0, rej = 0;
@@ -1173,7 +1178,7 @@ function renderCharts() {
         }
     }
 
-    // Process Financials & Methodology Distribution
+    // Process Financials & Methodology & Treatment Income Split
     _cachedPayments.forEach(data => {
         const d = data.createdat ? (typeof data.createdat === 'string' && data.createdat.includes('-') ? parseLocalYYYYMMDD(data.createdat.split('T')[0]) : new Date(data.createdat)) : null;
         if(d && d >= startDate && d <= endDate) {
@@ -1184,6 +1189,23 @@ function renderCharts() {
             if(method === 'Cash') cash++;
             else if(method === 'UPI') upi++;
             else if(method === 'Card') card++;
+
+            // Treatment Income Split (Case Insensitive)
+            const rawCat = data.treatmentcategory || data.treatmentCategory || 'Other';
+            const cat = rawCat.charAt(0).toUpperCase() + rawCat.slice(1).toLowerCase();
+            treatIncMap[cat] = (treatIncMap[cat] || 0) + (Number(data.amount) || 0);
+        }
+    });
+
+    // Process Treatment Volume Split
+    _cachedTreatments.forEach(t => {
+        const d = t.date ? parseLocalYYYYMMDD(t.date) : (t.createdat ? new Date(t.createdat) : null);
+        if(d && d >= startDate && d <= endDate) {
+            const rawDetails = t.details || 'Other';
+            // Extract category if it's the first word or just use first 20 chars
+            const cat = rawDetails.split(',')[0].split('\n')[0].trim();
+            const normalizedCat = cat.charAt(0).toUpperCase() + cat.slice(1).toLowerCase();
+            treatVolMap[normalizedCat] = (treatVolMap[normalizedCat] || 0) + 1;
         }
     });
 
@@ -1257,6 +1279,57 @@ function renderCharts() {
         const pmCanvas = document.getElementById('paymentMethodChart'); // Note: it's actually in Payment section
         // If we want a separate one for analytics, we'd need a different ID.
         // For now, let's just make sure Analytics doesn't break the Payment section one.
+    }
+
+    // Render Treatment Volume Chart
+    const tvCanvas = document.getElementById('treatmentVolumeChart');
+    if(tvCanvas) {
+        if(charts.tv) charts.tv.destroy();
+        const labels = Object.keys(treatVolMap);
+        const data = Object.values(treatVolMap);
+        charts.tv = new Chart(tvCanvas, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'],
+                    borderWidth: 0
+                }]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } }
+            }
+        });
+    }
+
+    // Render Treatment Income Chart
+    const tiCanvas = document.getElementById('treatmentIncomeChart');
+    if(tiCanvas) {
+        if(charts.ti) charts.ti.destroy();
+        const labels = Object.keys(treatIncMap);
+        const data = Object.values(treatIncMap);
+        charts.ti = new Chart(tiCanvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Income (₹)',
+                    data: data,
+                    backgroundColor: '#10b981',
+                    borderRadius: 4
+                }]
+            },
+            options: { 
+                indexAxis: 'y',
+                responsive: true, 
+                maintainAspectRatio: false,
+                scales: { x: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
     }
 
     // Render Traffic Bar Chart
