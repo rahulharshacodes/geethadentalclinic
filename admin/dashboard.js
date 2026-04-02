@@ -635,25 +635,10 @@ window.markAttendance = async (apptId, status, name, phone) => {
             );
             let patError;
             if (existingPat) {
-                // Update existing patient's visit date
-                const { error } = await supabase
-                    .from('patients')
-                    .update({
-                        visitdate: currentDateStr,
-                        notes: 'Arrived for appointment. ' + (existingPat.notes || '')
-                    })
-                    .eq('id', existingPat.id);
+                const { error } = await supabase.from('patients').update({ name: name, visitdate: currentDateStr }).eq('id', existingPat.id);
                 patError = error;
             } else {
-                // Insert new patient
-                const { error } = await supabase
-                    .from('patients')
-                    .insert([{
-                        name: name,
-                        phone: phone,
-                        visitdate: currentDateStr,
-                        notes: 'Arrived for appointment.'
-                    }]);
+                const { error } = await supabase.from('patients').insert([{ name: name, phone: phone, visitdate: currentDateStr, notes: 'Arrived for appointment.' }]);
                 patError = error;
             }
             if (patError) throw patError;
@@ -698,12 +683,42 @@ window.deleteWalkIn = (apptId, patName) => {
 
 async function executeDeleteWalkIn(apptId, patName) {
     try {
+        // Find patient info from appointment first to cascade delete
+        const { data: apptData } = await supabase.from('appointments').select('phone').eq('id', apptId).maybeSingle();
+        const patPhone = apptData ? apptData.phone : null;
+
+        // 1. Delete Appointment record for the day
         const { error: apptErr } = await supabase.from('appointments').delete().eq('id', apptId);
         if (apptErr) throw apptErr;
         
-        await supabase.from('patients').delete().match({ name: patName, visitdate: currentDateStr });
+        if (patPhone) {
+            const { data: pat } = await supabase.from('patients').select('id').eq('phone', patPhone).maybeSingle();
+            if (pat) {
+                // 2. Cascading Delete: Treatments and Payments strictly for THIS DATE
+                await supabase.from('treatments').delete().match({ patientid: pat.id, date: currentDateStr });
+                await supabase.from('payments').delete().match({ patientid: pat.id, createdat: currentDateStr });
+
+                // 3. Optional: Delete profile ONLY IF no other history remains
+                const [{ count: appts }, { count: treats }, { count: pays }] = await Promise.all([
+                    supabase.from('appointments').select('*', { count: 'exact', head: true }).eq('phone', patPhone),
+                    supabase.from('treatments').select('*', { count: 'exact', head: true }).eq('patientid', pat.id),
+                    supabase.from('payments').select('*', { count: 'exact', head: true }).eq('patientid', pat.id)
+                ]);
+
+                if (appts === 0 && treats === 0 && pays === 0) {
+                    await supabase.from('patients').delete().eq('id', pat.id);
+                    showToast('Visit and patient profile removed', 'success');
+                } else {
+                    showToast(`Visit data removed for ${patName}. History preserved.`, 'success');
+                }
+            } else {
+                showToast('Visit record removed', 'success');
+            }
+        } else {
+             showToast('Record removed', 'success');
+        }
         
-        showToast('Walk-in record completely deleted', 'success');
+        await Promise.all([fetchAppointments(), fetchPatients(), fetchTreatments(), fetchPayments()]);
     } catch (e) {
         console.error(e);
         showToast('Error deleting walk-in record', 'error');
@@ -886,16 +901,18 @@ document.getElementById('add-patient-form').addEventListener('submit', async (e)
         const phone = document.getElementById('new-pat-phone').value.trim();
         const notes = document.getElementById('new-pat-notes').value.trim();
 
-        // Register in Patients DB
-        const { error: patError } = await supabase
-            .from('patients')
-            .insert([{
-                name: name,
-                phone: phone,
-                notes: notes,
-                visitdate: currentDateStr
-            }]);
-        if (patError) throw patError;
+        // Check for existing patient by phone (smart deduplication)
+        const { data: existingPat } = await supabase.from('patients').select('id').eq('phone', phone).maybeSingle();
+
+        if (existingPat) {
+            // Update existing patient record with latest details and new visit date
+            const { error: upError } = await supabase.from('patients').update({ name: name, notes: notes, visitdate: currentDateStr }).eq('id', existingPat.id);
+            if (upError) throw upError;
+        } else {
+            // Register as New Patient profile
+            const { error: patError } = await supabase.from('patients').insert([{ name: name, phone: phone, notes: notes, visitdate: currentDateStr }]);
+            if (patError) throw patError;
+        }
 
         // Register in Appointments so it shows up in "Today's Patients" Queue with all actions
         const { error: apptError } = await supabase
