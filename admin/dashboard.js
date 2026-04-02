@@ -130,6 +130,7 @@ function initDateControl() {
         renderAppointmentsUI();
         renderPatientsUI();
         renderPaymentsUI();
+        if (typeof renderCharts === 'function') renderCharts();
     });
 }
 
@@ -201,6 +202,7 @@ async function fetchAppointments() {
     else {
         _cachedAppts = data;
         renderAppointmentsUI();
+        if (typeof renderCharts === 'function') renderCharts();
     }
 }
 
@@ -213,6 +215,7 @@ async function fetchPatients() {
     else {
         _cachedPatients = data;
         renderPatientsUI();
+        if (typeof renderCharts === 'function') renderCharts();
     }
 }
 
@@ -225,6 +228,7 @@ async function fetchPayments() {
     else {
         _cachedPayments = data;
         renderPaymentsUI();
+        if (typeof renderCharts === 'function') renderCharts();
     }
 }
 
