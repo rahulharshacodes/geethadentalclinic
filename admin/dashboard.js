@@ -952,7 +952,7 @@ document.getElementById('add-payment-form').addEventListener('submit', async (e)
         ui.modalContainer.style.display = 'none';
         e.target.reset();
     } catch(err) {
-        showToast(err.message || 'Error recording payment', 'error');
+        showToast(err.message || 'Error recording payment - Check if column exists', 'error');
         console.error('Payment Error:', err);
         if (submitBtn) submitBtn.disabled = false;
     } finally {
@@ -1012,15 +1012,16 @@ ui.treatmentForm.addEventListener('submit', async (e) => {
             showToast('Treatment notes saved to medical records', 'success');
         }
         
+        // Capture current patient info before reset
+        const currentPatientId = ui.tPatientId.value;
+        const currentPatientName = ui.tPatientName.textContent.replace('Treating: ', '');
+        
         ui.treatmentForm.reset();
         ui.treatmentForm.style.display = 'none';
         
         // Refresh the patient's view immediately with fresh data
         await fetchTreatments();
-        const currentPatientId = ui.tPatientId.value;
-        const currentPatientName = ui.tPatientName.textContent.replace('Treating: ', '');
-        
-        if (window.selectPatientForTreatment) {
+        if (window.selectPatientForTreatment && currentPatientId) {
             window.selectPatientForTreatment(currentPatientId, currentPatientName, null);
         }
     } catch(err) {
@@ -1287,22 +1288,32 @@ function renderCharts() {
         if(charts.tv) charts.tv.destroy();
         const labels = Object.keys(treatVolMap);
         const data = Object.values(treatVolMap);
-        charts.tv = new Chart(tvCanvas, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: data,
-                    backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'],
-                    borderWidth: 0
-                }]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false,
-                plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } }
-            }
-        });
+        
+        if (labels.length === 0) {
+            // Draw empty ring
+            charts.tv = new Chart(tvCanvas, {
+                type: 'doughnut',
+                data: { labels: ['No Data'], datasets: [{ data: [1], backgroundColor: ['#f1f5f9'], borderWidth: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, cutout: '80%' }
+            });
+        } else {
+            charts.tv = new Chart(tvCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#64748b'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'right', labels: { boxWidth: 12, font: { size: 10 } } } }
+                }
+            });
+        }
     }
 
     // Render Treatment Income Chart
@@ -1311,25 +1322,35 @@ function renderCharts() {
         if(charts.ti) charts.ti.destroy();
         const labels = Object.keys(treatIncMap);
         const data = Object.values(treatIncMap);
-        charts.ti = new Chart(tiCanvas, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Income (₹)',
-                    data: data,
-                    backgroundColor: '#10b981',
-                    borderRadius: 4
-                }]
-            },
-            options: { 
-                indexAxis: 'y',
-                responsive: true, 
-                maintainAspectRatio: false,
-                scales: { x: { beginAtZero: true } },
-                plugins: { legend: { display: false } }
-            }
-        });
+        
+        if (labels.length === 0) {
+            // Draw empty state
+            charts.ti = new Chart(tiCanvas, {
+                type: 'bar',
+                data: { labels: ['No Data'], datasets: [{ data: [0], backgroundColor: ['#f8fafc'] }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+            });
+        } else {
+            charts.ti = new Chart(tiCanvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Income (₹)',
+                        data: data,
+                        backgroundColor: '#10b981',
+                        borderRadius: 4
+                    }]
+                },
+                options: { 
+                    indexAxis: 'y',
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    scales: { x: { beginAtZero: true } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
     }
 
     // Render Traffic Bar Chart
